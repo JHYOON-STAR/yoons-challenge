@@ -487,7 +487,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.3 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.4 · 2026.05.20</div>
 
 <!-- Firebase -->
 <script type="module">
@@ -527,6 +527,7 @@ const MISSIONS = [
   { id: 'nonap',    name: '낮잠 안자기',         emoji: '☀️', desc: '낮잠 1시간 이내 가능',          points: 2 },
   { id: 'room',     name: '방 정리',             emoji: '🧹', desc: '하루 한 번 방 깔끔하게 정리',    points: 4 },
   { id: 'nodelivery', name: '배달 음식 안먹기',   emoji: '🛵', desc: '배달 음식 시키지 않기',         points: 1 },
+  { id: 'nosnacks',  name: '간식(과자) 안먹기',  emoji: '🍪', desc: '과자 등 간식 먹지 않기',          points: 1 },
 ];
 
 const MAX_DAILY = MISSIONS.reduce((s, m) => s + m.points, 0); // 14점 (미션 7개 × 2점)

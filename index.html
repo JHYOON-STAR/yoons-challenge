@@ -190,12 +190,12 @@
 <!-- 보상 탭 -->
 <div class="screen" id="screen-reward">
   <div class="section-title">🎯 보상 기준</div>
-  <div class="reward-card"><div class="reward-title">🥉 주간 80점 이상</div><div class="reward-desc">💵 3만원</div></div>
-  <div class="reward-card"><div class="reward-title">🥈 주간 100점 이상</div><div class="reward-desc">💵 5만원</div></div>
-  <div class="reward-card"><div class="reward-title">🥇 주간 120점 이상</div><div class="reward-desc">💵 10만원</div></div>
+  <div class="reward-card"><div class="reward-title">🥉 주간 100점 이상</div><div class="reward-desc">💵 3만원</div></div>
+  <div class="reward-card"><div class="reward-title">🥈 주간 120점 이상</div><div class="reward-desc">💵 5만원</div></div>
+  <div class="reward-card"><div class="reward-title">🥇 주간 140점 이상</div><div class="reward-desc">💵 10만원</div></div>
   <div class="reward-card" style="background:linear-gradient(135deg,#E3F2FD,#E8F5E9);border-color:#90CAF9;">
     <div class="reward-title" style="color:#1565C0">🎖️ 위로 보상</div>
-    <div class="reward-desc" style="color:#0D47A1">아무도 80점 미달 + 1등이 70점 이상이면<br>1등에게 💵 3만원</div>
+    <div class="reward-desc" style="color:#0D47A1">아무도 100점 미달 + 1등이 85점 이상이면<br>1등에게 💵 3만원</div>
   </div>
 
   <div class="section-title" style="margin-top:20px">📈 이번 주 내 진행상황</div>
@@ -207,7 +207,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.7 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.9 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -238,14 +238,14 @@ const MEMBERS = [
 const MISSIONS = [
   { id: 'wake',       name: '기상 시간 지키기', emoji: '⏰', desc: '평일 7~8시 / 주말 8~9시 (±30분 인정)', points: 2 },
   { id: 'water',      name: '물 1.5L 마시기',   emoji: '💧', desc: '하루 물 1.5리터 채우기',               points: 3 },
-  { id: 'exercise',   name: '운동 30분 이상',    emoji: '🏃', desc: '걷기, 운동 등 30분 이상',              points: 3 },
-  { id: 'meals',      name: '세끼 챙겨먹기',     emoji: '🍱', desc: '아침·점심·저녁 모두 챙기기',           points: 2 },
+  { id: 'exercise',   name: '운동 30분 이상',    emoji: '🏃', desc: '걷기, 운동 등 30분 이상',              points: 4 },
+  { id: 'meals',      name: '세끼 챙겨먹기',     emoji: '🍱', desc: '아침·점심·저녁 모두 챙기기',           points: 3 },
   { id: 'nosnack',    name: '야식 안 먹기',      emoji: '🚫', desc: '저녁 식사 후 야식 금지',               points: 1 },
   { id: 'sleep',      name: '자정 이전 취침',    emoji: '🌙', desc: '자정 12시 전에 잠들기',                points: 2 },
-  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '낮잠 1시간 이내 가능',                 points: 2 },
+  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '낮잠 1시간 이내 가능',                 points: 1 },
   { id: 'room',       name: '방 정리',           emoji: '🧹', desc: '하루 한 번 방 깔끔하게 정리',          points: 4 },
   { id: 'nodelivery', name: '배달 음식 안먹기',  emoji: '🛵', desc: '배달 음식 시키지 않기',                points: 1 },
-  { id: 'nosnacks',   name: '간식(과자) 안먹기', emoji: '🍪', desc: '과자 등 간식 먹지 않기',               points: 1 },
+  { id: 'nosnacks',   name: '간식(과자) 안먹기', emoji: '🍪', desc: '과자 등 간식 먹지 않기',               points: 2 },
 ];
 
 const MAX_DAILY = MISSIONS.reduce((s, m) => s + m.points, 0); // 21점
@@ -441,14 +441,14 @@ async function loadRanking() {
 
   // 위로 보상 조건
   const top = weekScores[0];
-  const allUnder80 = weekScores.every(m => m.score < 80);
+  const allUnder80 = weekScores.every(m => m.score < 100);
   const consolBox = document.getElementById('consolationBox');
-  if (allUnder80 && top.score >= 70) {
+  if (allUnder80 && top.score >= 85) {
     consolBox.innerHTML = `
       <div class="consolation-box">
         <div style="font-size:24px;margin-bottom:6px">🎖️</div>
         <div style="font-weight:700;font-size:15px;color:#E65100;margin-bottom:6px">위로 보상 해당!</div>
-        <div style="font-size:13px;color:#BF360C">아무도 80점을 못 넘었지만<br><strong>${top.name}</strong>이(가) 1등(${top.score}점)으로 열심히 했어요!<br><br>💵 위로 3만원 보상!</div>
+        <div style="font-size:13px;color:#BF360C">아무도 100점을 못 넘었지만<br><strong>${top.name}</strong>이(가) 1등(${top.score}점)으로 열심히 했어요!<br><br>💵 위로 3만원 보상!</div>
       </div>`;
   } else if (allUnder80 && top.score < 70) {
     consolBox.innerHTML = `<div class="consolation-box none"><div style="font-size:13px;color:var(--text-muted)">😅 이번 주는 모두 아쉬웠어요...<br>다음 주엔 다 같이 힘내봐요!</div></div>`;
@@ -555,30 +555,30 @@ async function selectRewardMember(member) {
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">달성률 <strong style="color:var(--primary-dark);font-size:16px">${weekPct}%</strong></div>
       <div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
-          <span>🥉 3만원 (80점)</span>
-          <span>${weekScore>=80?'✅ 달성!':Math.max(0,80-weekScore)+'점 남음'}</span>
-        </div>
-        <div class="progress-bar" style="margin-bottom:10px">
-          <div class="progress-fill" style="width:${Math.min(100,Math.round(weekScore/80*100))}%;background:${weekScore>=80?'var(--primary)':'#FFA726'}"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
-          <span>🥈 5만원 (100점)</span>
+          <span>🥉 3만원 (100점)</span>
           <span>${weekScore>=100?'✅ 달성!':Math.max(0,100-weekScore)+'점 남음'}</span>
         </div>
         <div class="progress-bar" style="margin-bottom:10px">
           <div class="progress-fill" style="width:${Math.min(100,Math.round(weekScore/100*100))}%;background:${weekScore>=100?'var(--primary)':'#FFA726'}"></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
-          <span>🥇 10만원 (120점)</span>
+          <span>🥈 5만원 (120점)</span>
           <span>${weekScore>=120?'✅ 달성!':Math.max(0,120-weekScore)+'점 남음'}</span>
         </div>
+        <div class="progress-bar" style="margin-bottom:10px">
+          <div class="progress-fill" style="width:${Math.min(100,Math.round(weekScore/120*100))}%;background:${weekScore>=120?'var(--primary)':'#FFA726'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+          <span>🥇 10만원 (140점)</span>
+          <span>${weekScore>=140?'✅ 달성!':Math.max(0,140-weekScore)+'점 남음'}</span>
+        </div>
         <div class="progress-bar">
-          <div class="progress-fill" style="width:${Math.min(100,Math.round(weekScore/120*100))}%"></div>
+          <div class="progress-fill" style="width:${Math.min(100,Math.round(weekScore/140*100))}%"></div>
         </div>
       </div>
-      ${weekScore>=80&&weekScore<100?'<div class="cheer-box">🎉 3만원 보상 달성! 대단해요!</div>':''}
-      ${weekScore>=100&&weekScore<120?'<div class="cheer-box">🎊 5만원 보상 달성! 최고예요!</div>':''}
-      ${weekScore>=120?'<div class="cheer-box">🏆 10만원 보상 달성! 완벽한 한 주예요!</div>':''}
+      ${weekScore>=100&&weekScore<120?'<div class="cheer-box">🎉 3만원 보상 달성! 대단해요!</div>':''}
+      ${weekScore>=120&&weekScore<140?'<div class="cheer-box">🎊 5만원 보상 달성! 최고예요!</div>':''}
+      ${weekScore>=140?'<div class="cheer-box">🏆 10만원 보상 달성! 완벽한 한 주예요!</div>':''}
     </div>`;
 }
 

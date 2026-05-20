@@ -81,6 +81,24 @@
   .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PIN 화면 */
+  .pin-screen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #2E7D32, #43A047);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .pin-screen h1 { font-family: 'Nunito', sans-serif; font-size: 26px; font-weight: 900; color: white; margin-bottom: 6px; }
+  .pin-screen p { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 40px; }
+  .pin-dots { display: flex; gap: 16px; margin-bottom: 32px; }
+  .pin-dot { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid rgba(255,255,255,0.6); transition: all 0.2s; }
+  .pin-dot.filled { background: white; border-color: white; }
+  .pin-keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+  .pin-key { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); color: white; font-size: 24px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-family: 'Nunito', sans-serif; }
+  .pin-key:active { background: rgba(255,255,255,0.35); transform: scale(0.95); }
+  .pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
+  .pin-error { color: #FFCDD2; font-size: 13px; font-weight: 700; margin-top: 16px; min-height: 20px; }
   .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: var(--card); border-radius: var(--radius); padding: 10px 14px; box-shadow: var(--shadow); }
   .week-nav-btn { background: var(--primary-light); border: none; border-radius: 8px; padding: 6px 14px; font-size: 14px; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
   .week-nav-btn:disabled { opacity: 0.3; cursor: default; }
@@ -92,6 +110,33 @@
 </style>
 </head>
 <body>
+
+<!-- PIN 화면 -->
+<div class="pin-screen" id="pinScreen">
+  <h1>🏆 윤패밀리 챌린지</h1>
+  <p>가족 비밀번호를 입력해주세요</p>
+  <div class="pin-dots">
+    <div class="pin-dot" id="dot0"></div>
+    <div class="pin-dot" id="dot1"></div>
+    <div class="pin-dot" id="dot2"></div>
+    <div class="pin-dot" id="dot3"></div>
+  </div>
+  <div class="pin-keypad">
+    <div class="pin-key" onclick="pinInput('1')">1</div>
+    <div class="pin-key" onclick="pinInput('2')">2</div>
+    <div class="pin-key" onclick="pinInput('3')">3</div>
+    <div class="pin-key" onclick="pinInput('4')">4</div>
+    <div class="pin-key" onclick="pinInput('5')">5</div>
+    <div class="pin-key" onclick="pinInput('6')">6</div>
+    <div class="pin-key" onclick="pinInput('7')">7</div>
+    <div class="pin-key" onclick="pinInput('8')">8</div>
+    <div class="pin-key" onclick="pinInput('9')">9</div>
+    <div class="pin-key empty"></div>
+    <div class="pin-key" onclick="pinInput('0')">0</div>
+    <div class="pin-key" onclick="pinDelete()">⌫</div>
+  </div>
+  <div class="pin-error" id="pinError"></div>
+</div>
 
 <div class="header">
   <h1>🏆 윤패밀리 챌린지</h1>
@@ -162,7 +207,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.6 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.7 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -553,6 +598,46 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ========== PIN ==========
+const PIN_CODE = '0137';
+let pinEntered = '';
+
+window.pinInput = function(num) {
+  if (pinEntered.length >= 4) return;
+  pinEntered += num;
+  updatePinDots();
+  if (pinEntered.length === 4) {
+    setTimeout(() => {
+      if (pinEntered === PIN_CODE) {
+        document.getElementById('pinScreen').style.display = 'none';
+        sessionStorage.setItem('pinPassed', '1');
+      } else {
+        document.getElementById('pinError').textContent = '❌ 비밀번호가 틀렸어요!';
+        pinEntered = '';
+        updatePinDots();
+        setTimeout(() => document.getElementById('pinError').textContent = '', 1500);
+      }
+    }, 200);
+  }
+};
+
+window.pinDelete = function() {
+  pinEntered = pinEntered.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+};
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('dot' + i).classList.toggle('filled', i < pinEntered.length);
+  }
+}
+
+// 이미 인증된 경우 PIN 화면 건너뜀 (같은 세션)
+if (sessionStorage.getItem('pinPassed') === '1') {
+  document.getElementById('pinScreen').style.display = 'none';
 }
 
 // ========== 초기화 ==========

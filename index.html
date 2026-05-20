@@ -487,7 +487,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.4 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.5 · 2026.05.20</div>
 
 <!-- Firebase -->
 <script type="module">
@@ -764,6 +764,34 @@ async function loadRanking() {
       </div>
     `;
   }).join('');
+
+  // 위로 보상 조건 체크: 아무도 80점 미달 + 1등이 70점 이상
+  const top = weekScores[0];
+  const allUnder80 = weekScores.every(m => m.score < 80);
+  const consolationEl = document.createElement('div');
+
+  if (allUnder80 && top.score >= 70) {
+    consolationEl.innerHTML = `
+      <div style="background:linear-gradient(135deg,#FFF8E1,#FFF3E0);border:2px solid #FFE082;border-radius:var(--border-radius-lg);padding:16px;margin-top:12px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">🎖️</div>
+        <div style="font-weight:700;font-size:15px;color:#E65100;margin-bottom:4px">이번 주 위로 보상!</div>
+        <div style="font-size:13px;color:#BF360C;">아무도 80점을 못 넘었지만<br><strong>${top.name}</strong>이(가) 1등(${top.score}점)으로 열심히 했어요!<br>💵 위로 3만원 보상!</div>
+      </div>
+    `;
+  } else if (allUnder80 && top.score < 70) {
+    consolationEl.innerHTML = `
+      <div style="background:var(--color-background-secondary);border:1px solid var(--border);border-radius:var(--border-radius-lg);padding:14px;margin-top:12px;text-align:center">
+        <div style="font-size:13px;color:var(--text-muted)">😅 이번 주는 모두 아쉬웠어요...<br>다음 주엔 다 같이 힘내봐요!</div>
+      </div>
+    `;
+  } else {
+    consolationEl.innerHTML = `
+      <div style="background:var(--color-background-secondary);border:1px solid var(--border);border-radius:var(--border-radius-lg);padding:14px;margin-top:12px;text-align:center">
+        <div style="font-size:13px;color:var(--text-muted)">✅ 보상 달성자가 있어요! 위로 보상 해당 없음</div>
+      </div>
+    `;
+  }
+  document.getElementById('rankingList').after(consolationEl);
 }
 
 // ========== 통계 ==========

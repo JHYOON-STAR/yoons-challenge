@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="윤패밀리 챌린지">
 <title>윤패밀리 챌린지 🏆</title>
+<meta name="version" content="v1.2">
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Nunito:wght@700;900&display=swap');
@@ -486,6 +487,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.2 · 2026.05.20</div>
 
 <!-- Firebase -->
 <script type="module">
@@ -630,6 +632,12 @@ function renderMissions() {
   const cheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
 
   const area = document.getElementById('missionArea');
+  const now = new Date();
+  const currentHour = now.getHours();
+  // 오늘 자정(00:00)~23:59만 수정 가능 — 날짜가 바뀌면 자동 잠금
+  const isToday = true; // 오늘 탭은 항상 오늘 날짜
+  const lockMsg = '';
+
   area.innerHTML = `
     <div class="mission-card">
       <h3>${currentMember.emoji} ${currentMember.name}의 오늘 미션</h3>
@@ -655,12 +663,23 @@ function renderMissions() {
         </div>
       `).join('')}
       <div class="cheer-box">${cheer}</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:center">
+        🔒 오늘 날짜(${todayStr})만 체크 가능 · 지난 날 수정 불가
+      </div>
     </div>
   `;
 }
 
 window.toggleMission = async function(missionId) {
   if (!currentMember) return;
+
+  // 날짜가 바뀌었으면 차단 (앱을 띄워놓고 자정이 넘긴 경우)
+  const realToday = new Date().toISOString().slice(0, 10);
+  if (realToday !== todayStr) {
+    showToast('🔒 날짜가 바뀌었어요! 새로고침 해주세요.');
+    return;
+  }
+
   todayChecks[missionId] = !todayChecks[missionId];
 
   // 즉시 UI 업데이트

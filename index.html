@@ -249,7 +249,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v2.2 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v2.4 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -270,11 +270,11 @@ const db = getFirestore(app);
 
 // ========== 앱 데이터 ==========
 const MEMBERS = [
-  { id: 'dad',      name: '아빠',   emoji: '👨' },
-  { id: 'mom',      name: '엄마',   emoji: '👩' },
-  { id: 'happy',    name: '해피',   emoji: '🐶' },
-  { id: 'princess', name: '공주님', emoji: '👸' },
-  { id: 'son',      name: '아들',   emoji: '👦' },
+  { id: 'dad',      name: '아빠',   emoji: '👨', color: '#1565C0', light: '#E3F2FD' },
+  { id: 'mom',      name: '엄마',   emoji: '👩', color: '#C2185B', light: '#FCE4EC' },
+  { id: 'happy',    name: '해피',   emoji: '🐶', color: '#E65100', light: '#FBE9E7' },
+  { id: 'princess', name: '공주님', emoji: '👸', color: '#6A1B9A', light: '#F3E5F5' },
+  { id: 'son',      name: '아들',   emoji: '👦', color: '#2E7D32', light: '#E8F5E9' },
 ];
 
 const MISSIONS = [
@@ -302,10 +302,24 @@ let todayChecks = {};
 let weekOffset = 0; // 0=이번주, -1=지난주
 
 const today = new Date();
-const todayStr = today.toISOString().slice(0, 10);
+// 한국 시간(UTC+9) 기준으로 오늘 날짜 계산
+function setHeaderColor(member) {
+  const header = document.querySelector('.header');
+  if (member) {
+    header.style.background = `linear-gradient(135deg, ${member.color}, ${member.color}dd)`;
+  } else {
+    header.style.background = 'linear-gradient(135deg, #2E7D32, #43A047)';
+  }
+}
+
+function getKSTDateStr(date) {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+const todayStr = getKSTDateStr(today);
 
 function getWeekStartDate(offsetWeeks = 0) {
-  const d = new Date(today);
+  const d = new Date(today.getTime() + 9 * 60 * 60 * 1000);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff + offsetWeeks * 7);
@@ -318,7 +332,8 @@ function formatDateKR(d) {
 }
 
 function formatDate(d) {
-  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getFullYear()}년 ${kst.getMonth()+1}월 ${kst.getDate()}일 (${['일','월','화','수','목','금','토'][kst.getDay()]})`;
 }
 document.getElementById('headerDate').textContent = formatDate(today);
 
@@ -371,6 +386,11 @@ function renderMemberBtns(containerId, onSelect, selectedId) {
   MEMBERS.forEach(m => {
     const btn = document.createElement('div');
     btn.className = 'member-btn' + (selectedId === m.id ? ' selected' : '');
+    if (selectedId === m.id) {
+      btn.style.borderColor = m.color;
+      btn.style.background = m.light;
+      btn.style.color = m.color;
+    }
     btn.innerHTML = `<div class="avatar">${m.emoji}</div><span>${m.name}</span>`;
     btn.onclick = () => onSelect(m);
     container.appendChild(btn);
@@ -381,7 +401,7 @@ function renderMemberBtns(containerId, onSelect, selectedId) {
 function getTargetDate() {
   const d = new Date(today);
   d.setDate(d.getDate() + dayOffset);
-  return d.toISOString().slice(0, 10);
+  return getKSTDateStr(d);
 }
 
 function updateDayNav() {
@@ -407,6 +427,7 @@ async function selectMember(member) {
   currentMember = member;
   renderMemberBtns('memberBtns', selectMember, member.id);
   localStorage.setItem('lastMember', member.id);
+  setHeaderColor(member);
   updateDayNav();
   const area = document.getElementById('missionArea');
   area.innerHTML = '<div class="loading"><div class="spinner"></div>미션 불러오는 중...</div>';
@@ -800,7 +821,10 @@ checkAndAddWeeklyReward();
 renderMemberBtns('memberBtns', selectMember, null);
 renderMemberBtns('rewardMemberBtns', selectRewardMember, null);
 const lastMemberId = localStorage.getItem('lastMember');
-if (lastMemberId) { const m = MEMBERS.find(m => m.id === lastMemberId); if (m) selectMember(m); }
+if (lastMemberId) {
+  const m = MEMBERS.find(m => m.id === lastMemberId);
+  if (m) { setHeaderColor(m); selectMember(m); }
+}
 </script>
 </body>
 </html>

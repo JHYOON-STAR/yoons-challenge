@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="윤패밀리 챌린지">
+<title>윤패밀리 챌린지 🏆</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Nunito:wght@700;900&display=swap');
+
+  :root {
+    --primary: #4CAF50;
+    --primary-dark: #388E3C;
+    --primary-light: #C8E6C9;
+    --accent: #FF7043;
+    --accent2: #42A5F5;
+    --gold: #FFD700;
+    --silver: #C0C0C0;
+    --bronze: #CD7F32;
+    --bg: #F1F8E9;
+    --card: #FFFFFF;
+    --text: #1B5E20;
+    --text-muted: #558B2F;
+    --border: #DCEDC8;
+    --shadow: 0 2px 12px rgba(76,175,80,0.12);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* 헤더 */
+  .header {
+    background: linear-gradient(135deg, #2E7D32, #43A047);
+    color: white;
+    padding: 20px 16px 16px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header h1 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+  .header .date {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  /* 탭 */
+  .tabs {
+    display: flex;
+    background: white;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 70px;
+    z-index: 99;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 4px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #999;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: var(--primary-dark);
+    border-bottom-color: var(--primary);
+  }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* 화면 */
+  .screen { display: none; padding: 16px; }
+  .screen.active { display: block; }
+
+  /* 멤버 선택 */
+  .member-selector {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .member-selector h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .member-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .member-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .member-btn .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .member-btn.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary-dark);
+  }
+
+  /* 미션 카드 */
+  .mission-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .mission-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .score-text {
+    font-family: 'Nunito', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--primary-dark);
+  }
+  .score-max { font-size: 14px; color: var(--text-muted); }
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #8BC34A);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* 미션 항목 */
+  .mission-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s;
+  }
+  .mission-item:last-child { border-bottom: none; }
+  .mission-item:active { background: var(--bg); border-radius: 8px; }
+  .mission-emoji { font-size: 24px; width: 36px; text-align: center; }
+  .mission-info { flex: 1; }
+  .mission-name { font-size: 14px; font-weight: 700; }
+  .mission-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .mission-check {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .mission-check.done {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  /* 랭킹 */
+  .ranking-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .rank-num {
+    font-family: 'Nunito', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    width: 32px;
+    text-align: center;
+  }
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: var(--silver); }
+  .rank-3 { color: var(--bronze); }
+  .rank-other { color: #ccc; }
+  .rank-avatar { font-size: 32px; }
+  .rank-info { flex: 1; }
+  .rank-name { font-size: 15px; font-weight: 700; }
+  .rank-score-text { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .rank-score {
+    font-family: 'Nunito', sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--primary-dark);
+  }
+  .rank-unit { font-size: 12px; color: var(--text-muted); }
+
+  /* 통계 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value {
+    font-family: 'Nunito', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--primary-dark);
+  }
+  .stat-unit { font-size: 13px; color: var(--text-muted); }
+
+  /* 주간 막대 그래프 */
+  .week-chart {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .week-chart h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 100px;
+  }
+  .chart-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .chart-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    min-height: 4px;
+    transition: height 0.4s ease;
+  }
+  .chart-bar.today { background: var(--primary); }
+  .chart-bar.past { background: var(--primary-light); }
+  .chart-bar.future { background: var(--border); }
+  .chart-day { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+  .chart-score { font-size: 10px; color: var(--text-muted); }
+
+  /* 보상 */
+  .reward-card {
+    background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 2px solid #FFE082;
+    box-shadow: var(--shadow);
+  }
+  .reward-title { font-size: 14px; font-weight: 700; color: #E65100; margin-bottom: 4px; }
+  .reward-desc { font-size: 13px; color: #BF360C; }
+  .reward-progress {
+    margin-top: 10px;
+    background: #FFE082;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .reward-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF9800, #FF5722);
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+
+  /* 섹션 제목 */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* 토스트 */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* 로딩 */
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 오늘의 응원 */
+  .cheer-box {
+    background: linear-gradient(135deg, #E8F5E9, #F1F8E9);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    border-left: 4px solid var(--primary);
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* 하단 네비 */
+  .bottom-nav {
+    display: none;
+  }
+
+  /* 반응형 */
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏆 윤패밀리 챌린지</h1>
+  <div class="date" id="headerDate"></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('home')">
+    <span class="tab-icon">🏠</span>오늘
+  </div>
+  <div class="tab" onclick="showTab('ranking')">
+    <span class="tab-icon">🏅</span>랭킹
+  </div>
+  <div class="tab" onclick="showTab('stats')">
+    <span class="tab-icon">📊</span>통계
+  </div>
+  <div class="tab" onclick="showTab('reward')">
+    <span class="tab-icon">🎁</span>보상
+  </div>
+</div>
+
+<!-- 오늘 탭 -->
+<div class="screen active" id="screen-home">
+  <div class="member-selector">
+    <h3>👤 나는 누구?</h3>
+    <div class="member-btns" id="memberBtns"></div>
+  </div>
+
+  <div id="missionArea">
+    <div class="loading">
+      <div class="spinner"></div>
+      멤버를 선택해주세요
+    </div>
+  </div>
+</div>
+
+<!-- 랭킹 탭 -->
+<div class="screen" id="screen-ranking">
+  <div class="section-title">🏆 이번 주 가족 랭킹</div>
+  <div id="rankingList">
+    <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+  </div>
+  <div class="section-title" style="margin-top:20px">📅 오늘 현황</div>
+  <div id="todayRanking">
+    <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+  </div>
+</div>
+
+<!-- 통계 탭 -->
+<div class="screen" id="screen-stats">
+  <div class="member-selector">
+    <h3>👤 멤버 선택</h3>
+    <div class="member-btns" id="statsMemberBtns"></div>
+  </div>
+  <div id="statsArea">
+    <div class="loading">멤버를 선택해주세요</div>
+  </div>
+</div>
+
+<!-- 보상 탭 -->
+<div class="screen" id="screen-reward">
+  <div class="section-title">🎯 보상 기준</div>
+  <div class="reward-card">
+    <div class="reward-title">🥉 주간 70점 이상</div>
+    <div class="reward-desc">💵 3만원</div>
+  </div>
+  <div class="reward-card">
+    <div class="reward-title">🥈 주간 85점 이상</div>
+    <div class="reward-desc">💵 5만원</div>
+  </div>
+  <div class="reward-card">
+    <div class="reward-title">🥇 주간 100점 (완벽)</div>
+    <div class="reward-desc">💵 10만원</div>
+  </div>
+
+  <div class="section-title" style="margin-top:20px">📈 이번 주 내 진행상황</div>
+  <div id="rewardProgress">
+    <div class="loading">로딩 중...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ========== Firebase 설정 ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyD-auubMQi2c0QQKwTjL9z03uzZmuifHCU",
+  authDomain: "yoons-health-challenge.firebaseapp.com",
+  projectId: "yoons-health-challenge",
+  storageBucket: "yoons-health-challenge.firebasestorage.app",
+  messagingSenderId: "301530979728",
+  appId: "1:301530979728:web:3f7ff77bb2ed423223e715",
+  measurementId: "G-RJHW3GP11S"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ========== 앱 데이터 ==========
+const MEMBERS = [
+  { id: 'dad',      name: '아빠',   emoji: '👨', color: '#42A5F5' },
+  { id: 'mom',      name: '엄마',   emoji: '👩', color: '#EC407A' },
+  { id: 'happy',    name: '해피',   emoji: '🐶', color: '#FF7043' },
+  { id: 'princess', name: '공주님', emoji: '👸', color: '#AB47BC' },
+  { id: 'son',      name: '아들',   emoji: '👦', color: '#26A69A' },
+];
+
+const MISSIONS = [
+  { id: 'wake',     name: '기상 시간 지키기', emoji: '⏰', desc: '평일 7~8시 / 주말 8~9시 (±30분 인정)', points: 2 },
+  { id: 'water',    name: '물 1.5L 마시기',   emoji: '💧', desc: '하루 물 1.5리터 채우기',    points: 2 },
+  { id: 'exercise', name: '운동 30분 이상',     emoji: '🏃', desc: '걷기, 운동 등 30분 이상',   points: 2 },
+  { id: 'meals',    name: '세끼 챙겨먹기',     emoji: '🍱', desc: '아침·점심·저녁 모두 챙기기', points: 2 },
+  { id: 'nosnack',  name: '야식 안 먹기',      emoji: '🚫', desc: '저녁 식사 후 야식 금지',    points: 2 },
+  { id: 'sleep',    name: '자정 이전 취침',    emoji: '🌙', desc: '자정 12시 전에 잠들기',     points: 2 },
+  { id: 'nonap',    name: '낮잠 안자기',         emoji: '☀️', desc: '낮잠 1시간 이내 가능',          points: 2 },
+  { id: 'room',     name: '방 정리',             emoji: '🧹', desc: '하루 한 번 방 깔끔하게 정리',    points: 2 },
+  { id: 'nodelivery', name: '배달 음식 안먹기',   emoji: '🛵', desc: '배달 음식 시키지 않기',         points: 1 },
+];
+
+const MAX_DAILY = MISSIONS.reduce((s, m) => s + m.points, 0); // 14점 (미션 7개 × 2점)
+
+const CHEERS = [
+  '오늘도 건강한 하루! 💪',
+  '가족과 함께라면 할 수 있어요! 🌟',
+  '작은 습관이 큰 변화를 만들어요! 🌱',
+  '윤가 파이팅! 🏆',
+  '건강이 최고의 재산! 💎',
+];
+
+// ========== 상태 ==========
+let currentMember = null;
+let statsMember = null;
+let todayChecks = {};
+
+const today = new Date();
+const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+
+// 이번 주 월요일 계산
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+const weekStart = getWeekStart(today);
+
+// 날짜 포맷
+function formatDate(d) {
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+}
+document.getElementById('headerDate').textContent = formatDate(today);
+
+// ========== Firebase 유틸 ==========
+async function getChecks(memberId, dateStr) {
+  try {
+    const ref = doc(db, 'checks', `${memberId}_${dateStr}`);
+    const snap = await getDoc(ref);
+    return snap.exists() ? (snap.data().missions || {}) : {};
+  } catch(e) { return {}; }
+}
+
+async function saveChecks(memberId, dateStr, missions) {
+  const ref = doc(db, 'checks', `${memberId}_${dateStr}`);
+  await setDoc(ref, { memberId, date: dateStr, missions, updatedAt: new Date().toISOString() }, { merge: true });
+}
+
+async function getWeekScore(memberId) {
+  let total = 0;
+  let daysElapsed = 0;
+  const start = new Date(weekStart);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    if (dateStr > todayStr) break;
+    daysElapsed++;
+    const checks = await getChecks(memberId, dateStr);
+    const score = Object.values(checks).filter(Boolean).length * 2;
+    total += score;
+  }
+  const maxPossible = daysElapsed * MAX_DAILY;
+  const pct = maxPossible > 0 ? Math.round(total / maxPossible * 100) : 0;
+  return { score: total, pct, daysElapsed, maxPossible };
+}
+
+// ========== 멤버 버튼 렌더 ==========
+function renderMemberBtns(containerId, onSelect, selectedId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  MEMBERS.forEach(m => {
+    const btn = document.createElement('div');
+    btn.className = 'member-btn' + (selectedId === m.id ? ' selected' : '');
+    btn.innerHTML = `<div class="avatar">${m.emoji}</div><span>${m.name}</span>`;
+    btn.onclick = () => onSelect(m);
+    container.appendChild(btn);
+  });
+}
+
+// ========== 오늘 미션 화면 ==========
+async function selectMember(member) {
+  currentMember = member;
+  renderMemberBtns('memberBtns', selectMember, member.id);
+  localStorage.setItem('lastMember', member.id);
+
+  const area = document.getElementById('missionArea');
+  area.innerHTML = '<div class="loading"><div class="spinner"></div>미션 불러오는 중...</div>';
+
+  todayChecks = await getChecks(member.id, todayStr);
+  renderMissions();
+}
+
+function calcScore(checks) {
+  return Object.values(checks).filter(Boolean).length * 2;
+}
+
+function renderMissions() {
+  const score = calcScore(todayChecks);
+  const pct = Math.round(score / MAX_DAILY * 100);
+  const cheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+
+  const area = document.getElementById('missionArea');
+  area.innerHTML = `
+    <div class="mission-card">
+      <h3>${currentMember.emoji} ${currentMember.name}의 오늘 미션</h3>
+      <div class="score-bar">
+        <div>
+          <span class="score-text">${score}</span>
+          <span class="score-max"> / ${MAX_DAILY}점</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      ${MISSIONS.map(m => `
+        <div class="mission-item" onclick="toggleMission('${m.id}')">
+          <div class="mission-emoji">${m.emoji}</div>
+          <div class="mission-info">
+            <div class="mission-name">${m.name}</div>
+            <div class="mission-desc">${m.desc} (+${m.points}점)</div>
+          </div>
+          <div class="mission-check ${todayChecks[m.id] ? 'done' : ''}" id="check_${m.id}">
+            ${todayChecks[m.id] ? '✓' : ''}
+          </div>
+        </div>
+      `).join('')}
+      <div class="cheer-box">${cheer}</div>
+    </div>
+  `;
+}
+
+window.toggleMission = async function(missionId) {
+  if (!currentMember) return;
+  todayChecks[missionId] = !todayChecks[missionId];
+
+  // 즉시 UI 업데이트
+  const checkEl = document.getElementById('check_' + missionId);
+  if (checkEl) {
+    checkEl.className = 'mission-check' + (todayChecks[missionId] ? ' done' : '');
+    checkEl.textContent = todayChecks[missionId] ? '✓' : '';
+  }
+
+  // 점수 업데이트
+  const score = calcScore(todayChecks);
+  const scoreEl = document.querySelector('.score-text');
+  const fillEl = document.querySelector('.progress-fill');
+  if (scoreEl) scoreEl.textContent = score;
+  if (fillEl) fillEl.style.width = Math.round(score / MAX_DAILY * 100) + '%';
+
+  // Firebase 저장
+  try {
+    await saveChecks(currentMember.id, todayStr, todayChecks);
+    showToast(todayChecks[missionId] ? '✅ 완료!' : '↩️ 취소됨');
+  } catch(e) {
+    showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.');
+  }
+};
+
+// ========== 랭킹 ==========
+async function loadRanking() {
+  // 주간 랭킹
+  const rankEl = document.getElementById('rankingList');
+  rankEl.innerHTML = '<div class="loading"><div class="spinner"></div>계산 중...</div>';
+
+  const weekScores = await Promise.all(
+    MEMBERS.map(async m => { const w = await getWeekScore(m.id); return { ...m, ...w }; })
+  );
+  weekScores.sort((a, b) => b.pct - a.pct || b.score - a.score);
+
+  const rankColors = ['rank-1', 'rank-2', 'rank-3', 'rank-other', 'rank-other'];
+  const medals = ['🥇', '🥈', '🥉', '4', '5'];
+  rankEl.innerHTML = weekScores.map((m, i) => `
+    <div class="ranking-card">
+      <div class="rank-num ${rankColors[i]}">${medals[i]}</div>
+      <div class="rank-avatar">${m.emoji}</div>
+      <div class="rank-info">
+        <div class="rank-name">${m.name}</div>
+        <div style="margin-top:4px;background:var(--border);border-radius:4px;height:5px;width:90px;overflow:hidden">
+          <div style="height:100%;width:${m.pct}%;background:linear-gradient(90deg,var(--primary),#8BC34A);border-radius:4px"></div>
+        </div>
+        <div class="rank-score-text" style="margin-top:3px">${m.score}점 / ${m.maxPossible}점 (${m.daysElapsed}일 기준)</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;color:var(--primary-dark)">${m.pct}%</div>
+        <div style="font-size:11px;color:var(--text-muted)">달성률</div>
+      </div>
+    </div>
+  `).join('');
+
+  // 오늘 랭킹
+  const todayEl = document.getElementById('todayRanking');
+  const todayScores = await Promise.all(
+    MEMBERS.map(async m => {
+      const checks = await getChecks(m.id, todayStr);
+      return { ...m, score: calcScore(checks), checks };
+    })
+  );
+  todayScores.sort((a, b) => b.score - a.score);
+
+  todayEl.innerHTML = todayScores.map((m, i) => {
+    const done = Object.values(m.checks).filter(Boolean).length;
+    return `
+      <div class="ranking-card">
+        <div class="rank-num ${rankColors[i]}">${i < 3 ? medals[i] : i+1}</div>
+        <div class="rank-avatar">${m.emoji}</div>
+        <div class="rank-info">
+          <div class="rank-name">${m.name}</div>
+          <div class="rank-score-text">${done}개 완료</div>
+        </div>
+        <div>
+          <span class="rank-score">${m.score}</span>
+          <span class="rank-unit">점</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ========== 통계 ==========
+async function selectStatsMember(member) {
+  statsMember = member;
+  renderMemberBtns('statsMemberBtns', selectStatsMember, member.id);
+
+  const area = document.getElementById('statsArea');
+  area.innerHTML = '<div class="loading"><div class="spinner"></div>통계 불러오는 중...</div>';
+
+  // 이번 주 7일 데이터
+  const start = new Date(weekStart);
+  const days = ['월','화','수','목','금','토','일'];
+  const dayData = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const isFuture = dateStr > todayStr;
+    const isToday = dateStr === todayStr;
+    let score = 0;
+    if (!isFuture) {
+      const checks = await getChecks(member.id, dateStr);
+      score = calcScore(checks);
+    }
+    dayData.push({ day: days[i], score, isFuture, isToday });
+  }
+
+  const weekScore = dayData.reduce((s, d) => s + d.score, 0);
+  const daysPlayed = dayData.filter(d => !d.isFuture).length;
+  const maxBar = Math.max(...dayData.map(d => d.score), 1);
+  const avgScore = daysPlayed > 0 ? Math.round(weekScore / daysPlayed) : 0;
+
+  area.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">이번 주 합계</div>
+        <div class="stat-value">${weekScore}<span class="stat-unit">점</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">하루 평균</div>
+        <div class="stat-value">${avgScore}<span class="stat-unit">점</span></div>
+      </div>
+    </div>
+    <div class="week-chart">
+      <h3>${member.emoji} ${member.name}의 이번 주</h3>
+      <div class="chart-bars">
+        ${dayData.map(d => `
+          <div class="chart-bar-wrap">
+            <div class="chart-score">${d.isFuture ? '' : d.score}</div>
+            <div class="chart-bar ${d.isToday ? 'today' : d.isFuture ? 'future' : 'past'}"
+              style="height:${d.isFuture ? 4 : Math.round(d.score / MAX_DAILY * 90)}px"></div>
+            <div class="chart-day">${d.day}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="mission-card">
+      <h3>📋 미션별 이번 주 달성률</h3>
+      ${await renderMissionStats(member.id)}
+    </div>
+  `;
+}
+
+async function renderMissionStats(memberId) {
+  const start = new Date(weekStart);
+  const missionCounts = {};
+  MISSIONS.forEach(m => missionCounts[m.id] = 0);
+  let daysCount = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    if (dateStr > todayStr) break;
+    daysCount++;
+    const checks = await getChecks(memberId, dateStr);
+    MISSIONS.forEach(m => { if (checks[m.id]) missionCounts[m.id]++; });
+  }
+
+  return MISSIONS.map(m => {
+    const pct = daysCount > 0 ? Math.round(missionCounts[m.id] / daysCount * 100) : 0;
+    return `
+      <div class="mission-item" style="cursor:default">
+        <div class="mission-emoji">${m.emoji}</div>
+        <div class="mission-info">
+          <div class="mission-name">${m.name}</div>
+          <div class="mission-desc">${missionCounts[m.id]}/${daysCount}일 완료</div>
+        </div>
+        <div style="text-align:right;min-width:44px">
+          <div style="font-weight:700;font-size:14px;color:var(--primary-dark)">${pct}%</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ========== 보상 ==========
+async function loadReward() {
+  const memberId = currentMember ? currentMember.id : MEMBERS[0].id;
+  const { score: weekScore, pct: weekPct, daysElapsed: weekDays, maxPossible: maxWeekPossible } = await getWeekScore(memberId);
+  const memberName = currentMember ? `${currentMember.emoji} ${currentMember.name}` : MEMBERS[0].name;
+
+  const maxWeekScore = MAX_DAILY * 7; // 98점 (14점 × 7일)
+
+  document.getElementById('rewardProgress').innerHTML = `
+    <div class="mission-card">
+      <h3>${memberName}의 이번 주 현황</h3>
+      <div class="score-bar">
+        <div>
+          <span class="score-text">${weekScore}</span>
+          <span class="score-max"> / ${maxWeekPossible}점 (${weekDays}일 기준)</span>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">달성률 <strong style="color:var(--primary-dark);font-size:16px">${weekPct}%</strong></div>
+      <div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+          <span>🥉 3만원 (70점)</span>
+          <span>${weekScore>=70 ? '✅ 달성!' : Math.max(0, 70 - weekScore)+'점 남음'}</span>
+        </div>
+        <div class="progress-bar" style="margin-bottom:10px">
+          <div class="progress-fill" style="width:${Math.min(100, Math.round(weekScore/70*100))}%;background:${weekScore>=70?'var(--primary)':'#FFA726'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+          <span>🥈 5만원 (85점)</span>
+          <span>${weekScore>=85 ? '✅ 달성!' : Math.max(0, 85 - weekScore)+'점 남음'}</span>
+        </div>
+        <div class="progress-bar" style="margin-bottom:10px">
+          <div class="progress-fill" style="width:${Math.min(100, Math.round(weekScore/85*100))}%;background:${weekScore>=85?'var(--primary)':'#FFA726'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+          <span>🥇 10만원 (100점)</span>
+          <span>${weekScore>=100 ? '✅ 달성!' : Math.max(0, 100 - weekScore)+'점 남음'}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${Math.min(100, Math.round(weekScore/100*100))}%"></div>
+        </div>
+      </div>
+      ${weekScore >= 70 && weekScore < 85 ? '<div class="cheer-box">🎉 3만원 보상 달성! 대단해요!</div>' : ''}
+      ${weekScore >= 85 && weekScore < 100 ? '<div class="cheer-box">🎊 5만원 보상 달성! 최고예요!</div>' : ''}
+      ${weekScore >= 100 ? '<div class="cheer-box">🏆 10만원 보상 달성! 완벽한 한 주예요!</div>' : ''}
+    </div>
+  `;
+}
+
+// ========== 탭 전환 ==========
+window.showTab = function(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.querySelectorAll('.tab')[['home','ranking','stats','reward'].indexOf(tab)].classList.add('active');
+
+  if (tab === 'ranking') loadRanking();
+  if (tab === 'stats') {
+    renderMemberBtns('statsMemberBtns', selectStatsMember, statsMember?.id);
+    if (statsMember) selectStatsMember(statsMember);
+  }
+  if (tab === 'reward') loadReward();
+};
+
+// ========== 토스트 ==========
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ========== 초기화 ==========
+renderMemberBtns('memberBtns', selectMember, null);
+renderMemberBtns('statsMemberBtns', selectStatsMember, null);
+
+// 마지막 선택 멤버 복원
+const lastMemberId = localStorage.getItem('lastMember');
+if (lastMemberId) {
+  const lastMember = MEMBERS.find(m => m.id === lastMemberId);
+  if (lastMember) selectMember(lastMember);
+}
+</script>
+</body>
+</html>

@@ -156,6 +156,15 @@
     <h3>👤 나는 누구?</h3>
     <div class="member-btns" id="memberBtns"></div>
   </div>
+  <!-- 날짜 선택 -->
+  <div class="week-nav" style="margin-bottom:12px">
+    <button class="week-nav-btn" id="prevDayBtn" onclick="changeDay(-1)">◀ 이전</button>
+    <div class="week-nav-info">
+      <div class="week-nav-label" id="dayLabel">오늘</div>
+      <div class="week-nav-range" id="dayDate"></div>
+    </div>
+    <button class="week-nav-btn" id="nextDayBtn" onclick="changeDay(1)" disabled>다음 ▶</button>
+  </div>
   <div id="missionArea">
     <div class="loading"><div class="spinner"></div>멤버를 선택해주세요</div>
   </div>
@@ -207,7 +216,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v1.9 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v2.1 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -252,6 +261,7 @@ const MAX_DAILY = MISSIONS.reduce((s, m) => s + m.points, 0); // 21점
 const CHEERS = ['오늘도 건강한 하루! 💪','가족과 함께라면 할 수 있어요! 🌟','작은 습관이 큰 변화를 만들어요! 🌱','윤패밀리 파이팅! 🏆','건강이 최고의 재산! 💎'];
 
 // ========== 상태 ==========
+let dayOffset = 0; // 0=오늘, -1=어제, -2=그제...
 let currentMember = null;
 let statsMember = null;
 let rewardMember = null;
@@ -335,13 +345,39 @@ function renderMemberBtns(containerId, onSelect, selectedId) {
 }
 
 // ========== 오늘 미션 ==========
+function getTargetDate() {
+  const d = new Date(today);
+  d.setDate(d.getDate() + dayOffset);
+  return d.toISOString().slice(0, 10);
+}
+
+function updateDayNav() {
+  const d = new Date(today);
+  d.setDate(d.getDate() + dayOffset);
+  const days = ['일','월','화','수','목','금','토'];
+  const label = dayOffset === 0 ? '오늘' : dayOffset === -1 ? '어제' : `${Math.abs(dayOffset)}일 전`;
+  document.getElementById('dayLabel').textContent = label;
+  document.getElementById('dayDate').textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`;
+  document.getElementById('prevDayBtn').disabled = dayOffset <= -1;
+  document.getElementById('nextDayBtn').disabled = dayOffset >= 0;
+}
+
+window.changeDay = function(dir) {
+  const newOffset = dayOffset + dir;
+  if (newOffset > 0 || newOffset < -1) return;
+  dayOffset = newOffset;
+  updateDayNav();
+  if (currentMember) selectMember(currentMember);
+};
+
 async function selectMember(member) {
   currentMember = member;
   renderMemberBtns('memberBtns', selectMember, member.id);
   localStorage.setItem('lastMember', member.id);
+  updateDayNav();
   const area = document.getElementById('missionArea');
   area.innerHTML = '<div class="loading"><div class="spinner"></div>미션 불러오는 중...</div>';
-  todayChecks = await getChecks(member.id, todayStr);
+  todayChecks = await getChecks(member.id, getTargetDate());
   renderMissions();
 }
 
@@ -352,7 +388,7 @@ function renderMissions() {
   const area = document.getElementById('missionArea');
   area.innerHTML = `
     <div class="mission-card">
-      <h3>${currentMember.emoji} ${currentMember.name}의 오늘 미션</h3>
+      <h3>${currentMember.emoji} ${currentMember.name}의 ${dayOffset === 0 ? '오늘' : Math.abs(dayOffset) + '일 전'} 미션</h3>
       <div class="score-bar">
         <div><span class="score-text">${score}</span><span class="score-max"> / ${MAX_DAILY}점</span></div>
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -368,14 +404,12 @@ function renderMissions() {
         </div>
       `).join('')}
       <div class="cheer-box">${cheer}</div>
-      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:center">🔒 오늘(${todayStr})만 체크 가능 · 지난 날 수정 불가</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:center">${dayOffset === 0 ? '📅 오늘' : '📝 어제'} · 오늘/어제만 수정 가능</div>
     </div>`;
 }
 
 window.toggleMission = async function(missionId) {
   if (!currentMember) return;
-  const realToday = new Date().toISOString().slice(0, 10);
-  if (realToday !== todayStr) { showToast('🔒 날짜가 바뀌었어요! 새로고침 해주세요.'); return; }
   todayChecks[missionId] = !todayChecks[missionId];
   const checkEl = document.getElementById('check_' + missionId);
   if (checkEl) { checkEl.className = 'mission-check' + (todayChecks[missionId] ? ' done' : ''); checkEl.textContent = todayChecks[missionId] ? '✓' : ''; }
@@ -385,7 +419,7 @@ window.toggleMission = async function(missionId) {
   if (scoreEl) scoreEl.textContent = score;
   if (fillEl) fillEl.style.width = Math.round(score / MAX_DAILY * 100) + '%';
   try {
-    await saveChecks(currentMember.id, todayStr, todayChecks);
+    await saveChecks(currentMember.id, getTargetDate(), todayChecks);
     showToast(todayChecks[missionId] ? '✅ 완료!' : '↩️ 취소됨');
   } catch(e) { showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.'); }
 };

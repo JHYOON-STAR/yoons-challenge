@@ -297,7 +297,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.8 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.9 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -1097,6 +1097,16 @@ function updatePinDots() {
 const FP_CRED_KEY = 'fp_credential_id';
 
 async function tryFingerprint() {
+  const hintEl = document.getElementById('fingerprintHint');
+  if (!window.PublicKeyCredential) {
+    hintEl.textContent = '❌ 이 브라우저는 지문인식을 지원하지 않아요';
+    return;
+  }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if (!available) {
+    hintEl.textContent = '❌ 이 기기에서 지문인식을 사용할 수 없어요';
+    return;
+  }
   const credId = localStorage.getItem(FP_CRED_KEY);
   if (!credId) {
     await registerFingerprint();

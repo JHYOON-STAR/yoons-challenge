@@ -297,7 +297,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.3 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.5 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -385,12 +385,13 @@ const MEMBERS = [
 
 const MISSIONS = [
   { id: 'wake',       name: '기상 시간 지키기', emoji: '⏰', desc: '평일 7~8시 / 주말 8~9시 (±30분 인정)', points: 2 },
-  { id: 'water',      name: '물 1.5L 마시기',   emoji: '💧', desc: '하루 물 1.5리터 채우기',               points: 3 },
+  { id: 'water',      name: '물 1.5L 마시기',   emoji: '💧', desc: '하루 물 1.5리터 채우기',               points: 2 },
   { id: 'exercise',   name: '운동 30분 이상',    emoji: '🏃', desc: '걷기, 운동 등 30분 이상',              points: 4 },
   { id: 'meals',      name: '세끼 챙겨먹기',     emoji: '🍱', desc: '아침·점심·저녁 모두 챙기기',           points: 3 },
   { id: 'nosnack',    name: '야식 안 먹기',      emoji: '🚫', desc: '저녁 식사 후 야식 금지',               points: 1 },
   { id: 'sleep',      name: '자정 이전 취침',    emoji: '🌙', desc: '자정 12시 전에 잠들기',                points: 2 },
-  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '누워서 30분 이상 쉬면 낮잠으로 인정', points: 1 },
+  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '낮잠 1시간 이내 가능',                 points: 1 },
+  { id: 'nolazing',   name: '빈둥거리기 안하기',  emoji: '🛋️', desc: '바닥에 누워서 30분 이상 빈둥거리지 않기', points: 1 },
   { id: 'room',       name: '방 정리',           emoji: '🧹', desc: '하루 한 번 방 깔끔하게 정리',          points: 6 },
   { id: 'nodelivery', name: '배달 음식 안먹기',  emoji: '🛵', desc: '배달 음식 시키지 않기',                points: 1 },
   { id: 'nosnacks',   name: '간식(과자) 안먹기', emoji: '🍪', desc: '과자 등 간식 먹지 않기',               points: 2 },

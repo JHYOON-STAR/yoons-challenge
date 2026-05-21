@@ -292,7 +292,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.1 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.2 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -881,34 +881,16 @@ window.hideCouponModal = function() {
 document.getElementById('couponImage')?.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('⚠️ 사진이 너무 커요! 3MB 이하 사진을 선택해주세요');
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  document.getElementById('couponPreviewImg').src = url;
+  document.getElementById('couponPreview').style.display = 'block';
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const MAX = 600;
-      let w = img.naturalWidth || img.width;
-      let h = img.naturalHeight || img.height;
-      if (w === 0 || h === 0) {
-        document.getElementById('couponPreviewImg').src = ev.target.result;
-        document.getElementById('couponPreview').style.display = 'block';
-        return;
-      }
-      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
-      else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/jpeg', 0.8);
-      document.getElementById('couponPreviewImg').src = compressed;
-      document.getElementById('couponPreview').style.display = 'block';
-    };
-    img.onerror = function() {
-      document.getElementById('couponPreviewImg').src = ev.target.result;
-      document.getElementById('couponPreview').style.display = 'block';
-    };
-    img.src = ev.target.result;
+    document.getElementById('couponPreviewImg')._base64 = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
@@ -916,9 +898,10 @@ document.getElementById('couponImage')?.addEventListener('change', function(e) {
 window.saveCoupon = async function() {
   const name = document.getElementById('couponName').value.trim();
   if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
-  const img = document.getElementById('couponPreviewImg').src;
+  const previewEl = document.getElementById('couponPreviewImg');
   const hasImg = document.getElementById('couponPreview').style.display !== 'none';
-  coupons.push({ id: Date.now(), name, image: hasImg ? img : null, usedBy: null, usedDate: null });
+  const imgData = hasImg ? (previewEl._base64 || previewEl.src) : null;
+  coupons.push({ id: Date.now(), name, image: imgData, usedBy: null, usedDate: null });
   try {
     await saveCoupons();
     showToast('✅ 쿠폰이 추가됐어요!');

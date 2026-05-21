@@ -297,7 +297,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.7 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.8 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -1044,7 +1044,7 @@ function showToast(msg) {
 
 // ========== PIN + 지문인식 ==========
 let pinEntered = '';
-let storedPin = '0137'; // 기본값, Firebase에서 불러옴
+let storedPin = '';
 
 // Firebase에서 PIN 불러오기
 async function loadPin() {
@@ -1054,7 +1054,7 @@ async function loadPin() {
     if (snap.exists() && snap.data().code) {
       storedPin = snap.data().code;
     }
-  } catch(e) { /* 기본값 사용 */ }
+  } catch(e) { }
 }
 
 function unlockApp() {

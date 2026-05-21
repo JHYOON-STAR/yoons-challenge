@@ -114,7 +114,7 @@
 <!-- PIN 화면 -->
 <div class="pin-screen" id="pinScreen">
   <h1>🏆 윤패밀리 챌린지</h1>
-  <p>가족 비밀번호를 입력해주세요</p>
+  <p id="pinSubtitle">가족 비밀번호를 입력해주세요</p>
   <div class="pin-dots">
     <div class="pin-dot" id="dot0"></div>
     <div class="pin-dot" id="dot1"></div>
@@ -131,11 +131,12 @@
     <div class="pin-key" onclick="pinInput('7')">7</div>
     <div class="pin-key" onclick="pinInput('8')">8</div>
     <div class="pin-key" onclick="pinInput('9')">9</div>
-    <div class="pin-key empty"></div>
+    <div class="pin-key" id="fingerprintBtn" onclick="tryFingerprint()" style="font-size:22px">👆</div>
     <div class="pin-key" onclick="pinInput('0')">0</div>
     <div class="pin-key" onclick="pinDelete()">⌫</div>
   </div>
   <div class="pin-error" id="pinError"></div>
+  <div style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.6)" id="fingerprintHint"></div>
 </div>
 
 <div class="header">
@@ -296,7 +297,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.6 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.7 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -1041,19 +1042,35 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ========== PIN ==========
-const PIN_CODE = '0137';
+// ========== PIN + 지문인식 ==========
 let pinEntered = '';
+let storedPin = '0137'; // 기본값, Firebase에서 불러옴
+
+// Firebase에서 PIN 불러오기
+async function loadPin() {
+  try {
+    const ref = doc(db, 'settings', 'pin');
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().code) {
+      storedPin = snap.data().code;
+    }
+  } catch(e) { /* 기본값 사용 */ }
+}
+
+function unlockApp() {
+  document.getElementById('pinScreen').style.display = 'none';
+  sessionStorage.setItem('pinPassed', '1');
+}
 
 window.pinInput = function(num) {
   if (pinEntered.length >= 4) return;
   pinEntered += num;
   updatePinDots();
   if (pinEntered.length === 4) {
-    setTimeout(() => {
-      if (pinEntered === PIN_CODE) {
-        document.getElementById('pinScreen').style.display = 'none';
-        sessionStorage.setItem('pinPassed', '1');
+    setTimeout(async () => {
+      await loadPin();
+      if (pinEntered === storedPin) {
+        unlockApp();
       } else {
         document.getElementById('pinError').textContent = '❌ 비밀번호가 틀렸어요!';
         pinEntered = '';
@@ -1076,9 +1093,88 @@ function updatePinDots() {
   }
 }
 
-// 이미 인증된 경우 PIN 화면 건너뜀 (같은 세션)
+// ========== 지문 인식 ==========
+const FP_CRED_KEY = 'fp_credential_id';
+
+async function tryFingerprint() {
+  const credId = localStorage.getItem(FP_CRED_KEY);
+  if (!credId) {
+    await registerFingerprint();
+  } else {
+    await authenticateFingerprint(credId);
+  }
+}
+
+async function registerFingerprint() {
+  if (!window.PublicKeyCredential) {
+    document.getElementById('fingerprintHint').textContent = '이 기기는 지문인식을 지원하지 않아요';
+    return;
+  }
+  try {
+    document.getElementById('pinSubtitle').textContent = '지문을 등록해주세요';
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: '윤패밀리 챌린지', id: location.hostname },
+        user: { id: new Uint8Array(16), name: 'family', displayName: '가족' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+      }
+    });
+    const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    localStorage.setItem(FP_CRED_KEY, credIdB64);
+    document.getElementById('fingerprintHint').textContent = '✅ 지문 등록 완료!';
+    document.getElementById('pinSubtitle').textContent = '가족 비밀번호를 입력해주세요';
+    document.getElementById('fingerprintBtn').textContent = '👆';
+    setTimeout(() => unlockApp(), 800);
+  } catch(e) {
+    document.getElementById('pinSubtitle').textContent = '가족 비밀번호를 입력해주세요';
+    document.getElementById('fingerprintHint').textContent = '지문 등록을 취소했어요';
+    setTimeout(() => document.getElementById('fingerprintHint').textContent = '', 2000);
+  }
+}
+
+async function authenticateFingerprint(credIdB64) {
+  if (!window.PublicKeyCredential) { return; }
+  try {
+    document.getElementById('pinSubtitle').textContent = '지문을 인식해주세요';
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    const credIdBytes = Uint8Array.from(atob(credIdB64), c => c.charCodeAt(0));
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ type: 'public-key', id: credIdBytes }],
+        userVerification: 'required',
+        timeout: 60000,
+      }
+    });
+    unlockApp();
+  } catch(e) {
+    document.getElementById('pinSubtitle').textContent = '가족 비밀번호를 입력해주세요';
+    if (e.name === 'NotAllowedError') {
+      document.getElementById('fingerprintHint').textContent = '지문 인식 실패. PIN을 입력해주세요';
+    } else {
+      localStorage.removeItem(FP_CRED_KEY);
+      document.getElementById('fingerprintHint').textContent = '지문을 다시 등록해주세요 (👆 버튼)';
+    }
+    setTimeout(() => document.getElementById('fingerprintHint').textContent = '', 2500);
+  }
+}
+
+// 지문 등록 여부에 따라 힌트 표시
+const hasFP = !!localStorage.getItem(FP_CRED_KEY);
+document.getElementById('fingerprintHint').textContent = hasFP ? '👆 버튼으로 지문 인식 가능' : '👆 버튼으로 지문 등록 가능';
+
+// 이미 인증된 경우 PIN 화면 건너뜀
 if (sessionStorage.getItem('pinPassed') === '1') {
   document.getElementById('pinScreen').style.display = 'none';
+} else if (hasFP) {
+  // 지문 등록된 기기면 자동으로 지문 인식 시도
+  setTimeout(() => tryFingerprint(), 500);
 }
 
 // ========== 초기화 ==========

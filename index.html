@@ -296,7 +296,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.5 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.6 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -835,17 +835,49 @@ function renderCoupons() {
 
   // 한국 시간 기준 오늘 날짜
   function getExpiryInfo(expiry) {
-    if (!expiry) return { html: '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📅 기한 없음</div>', isExpired: false };
+    if (!expiry) return {
+      html: `<div style="background:var(--bg);border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+               <span style="font-size:10px;color:var(--text-muted)">사용기한 : 기한 없음</span>
+             </div>`,
+      isExpired: false, border: ''
+    };
     const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
     const todayKST = kstNow.toISOString().slice(0, 10);
     const diffMs = new Date(expiry) - new Date(todayKST);
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const dateShort = expiry.slice(5).replace('-', '.');
     if (diffDays < 0) {
-      return { html: `<div style="font-size:10px;color:#C62828;font-weight:500;margin-bottom:6px">❌ ~${expiry} 만료됨</div>`, isExpired: true };
+      return {
+        html: `<div style="background:#FFEBEE;border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+                 <span style="font-size:10px;color:#C62828;font-weight:500">사용기한 : ~${dateShort}</span>
+                 <span style="font-size:11px;font-weight:700;color:#C62828">만료</span>
+               </div>`,
+        isExpired: true, border: ''
+      };
+    } else if (diffDays <= 1) {
+      return {
+        html: `<div style="background:#FFEBEE;border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;border:1px solid #FFCDD2">
+                 <span style="font-size:10px;color:#C62828;font-weight:700">🚨 사용기한 : ~${dateShort} 내일까지!</span>
+                 <span style="font-size:11px;font-weight:700;color:#C62828">D-${diffDays}</span>
+               </div>`,
+        isExpired: false, border: '2px solid #FFCDD2'
+      };
     } else if (diffDays <= 7) {
-      return { html: `<div style="font-size:10px;color:#E65100;font-weight:500;margin-bottom:6px">⚠️ ~${expiry} D-${diffDays}</div>`, isExpired: false };
+      return {
+        html: `<div style="background:#FFF3E0;border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;border:1px solid #FFE0B2">
+                 <span style="font-size:10px;color:#E65100;font-weight:500">⚠️ 사용기한 : ~${dateShort}</span>
+                 <span style="font-size:12px;font-weight:700;color:#E65100">D-${diffDays}</span>
+               </div>`,
+        isExpired: false, border: '1px solid #FFE0B2'
+      };
     } else {
-      return { html: `<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📅 ~${expiry} <span style="color:var(--primary-dark)">D-${diffDays}</span></div>`, isExpired: false };
+      return {
+        html: `<div style="background:#E8F5E9;border-radius:6px;padding:5px 8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+                 <span style="font-size:10px;color:#2E7D32;font-weight:500">사용기한 : ~${dateShort}</span>
+                 <span style="font-size:11px;font-weight:700;color:#2E7D32">D-${diffDays}</span>
+               </div>`,
+        isExpired: false, border: ''
+      };
     }
   }
 
@@ -863,7 +895,7 @@ function renderCoupons() {
       : `<div style="width:100%;height:100px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-muted)">사진 없음</div>`;
     const usedDate = c.usedDate ? (() => { const d = new Date(c.usedDate); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`; })() : '';
     return `
-      <div style="background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);position:relative;${isUsed||isExpired?'opacity:0.45':''}">
+      <div style="background:var(--card);border-radius:var(--radius);overflow:hidden;border:${isUsed||isExpired?'1px solid var(--border)':expiryInfo.border||'1px solid var(--border)'};position:relative;${isUsed||isExpired?'opacity:0.45':''}">
         ${isUsed?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">사용완료</div>`
         : isExpired?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">기한만료</div>`:''}
         ${imgHtml}

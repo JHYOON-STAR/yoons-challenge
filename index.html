@@ -297,7 +297,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.9 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.0 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -1096,15 +1096,20 @@ function updatePinDots() {
 // ========== 지문 인식 ==========
 const FP_CRED_KEY = 'fp_credential_id';
 
-async function tryFingerprint() {
+window.tryFingerprint = async function() {
   const hintEl = document.getElementById('fingerprintHint');
   if (!window.PublicKeyCredential) {
     hintEl.textContent = '❌ 이 브라우저는 지문인식을 지원하지 않아요';
     return;
   }
-  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  if (!available) {
-    hintEl.textContent = '❌ 이 기기에서 지문인식을 사용할 수 없어요';
+  try {
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) {
+      hintEl.textContent = '❌ 이 기기에서 지문인식을 사용할 수 없어요';
+      return;
+    }
+  } catch(e) {
+    hintEl.textContent = '❌ 지문인식 확인 중 오류: ' + e.message;
     return;
   }
   const credId = localStorage.getItem(FP_CRED_KEY);
@@ -1113,7 +1118,7 @@ async function tryFingerprint() {
   } else {
     await authenticateFingerprint(credId);
   }
-}
+};
 
 async function registerFingerprint() {
   if (!window.PublicKeyCredential) {

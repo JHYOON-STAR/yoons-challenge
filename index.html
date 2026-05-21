@@ -246,10 +246,45 @@
     <div class="member-btns" id="rewardMemberBtns"></div>
   </div>
   <div id="rewardProgress"><div class="loading">멤버를 선택해주세요</div></div>
+
+  <div class="section-title" style="margin-top:20px">🎟️ 쿠폰 카드</div>
+  <button onclick="showCouponAdd()" style="width:100%;padding:12px;border-radius:var(--radius);background:var(--card);border:2px dashed var(--border);font-size:14px;font-weight:700;color:var(--text-muted);cursor:pointer;margin-bottom:12px">+ 쿠폰 추가</button>
+  <div id="couponGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+
+  <!-- 쿠폰 추가 모달 -->
+  <div id="couponModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--card);border-radius:var(--radius);padding:20px;margin:20px;width:calc(100%-40px);max-width:340px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">🎟️ 쿠폰 추가</h3>
+      <input id="couponName" type="text" placeholder="쿠폰 이름 입력" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;margin-bottom:10px;background:var(--bg);color:var(--text)">
+      <div style="margin-bottom:10px">
+        <input id="couponImage" type="file" accept="image/*" style="display:none">
+        <button type="button" onclick="document.getElementById('couponImage').click()" style="width:100%;padding:10px;border-radius:8px;border:1px dashed var(--border);background:var(--bg);font-size:14px;font-weight:700;color:var(--text-muted);cursor:pointer">📷 사진 선택하기</button>
+      </div>
+      <div id="couponPreview" style="display:none;width:100%;height:120px;border-radius:8px;overflow:hidden;margin-bottom:10px">
+        <img id="couponPreviewImg" style="width:100%;height:100%;object-fit:cover">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="hideCouponModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer">취소</button>
+        <button onclick="saveCoupon()" style="flex:1;padding:10px;border-radius:8px;background:var(--primary-dark);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사용자 선택 모달 -->
+  <div id="useModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--card);border-radius:var(--radius);padding:20px;margin:20px;width:calc(100%-40px);max-width:340px">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">누가 사용했나요?</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="useModalBtns"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="hideUseModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer">취소</button>
+        <button onclick="confirmUse()" style="flex:1;padding:10px;border-radius:8px;background:var(--primary-dark);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer">확인</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v2.4 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v2.6 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -758,6 +793,159 @@ async function selectRewardMember(member) {
     </div>`;
 }
 
+// ========== 쿠폰 ==========
+let coupons = [];
+let selectedUseId = null;
+let selectedUseMember = null;
+
+async function loadCoupons() {
+  try {
+    const ref = doc(db, 'coupons', 'all');
+    const snap = await getDoc(ref);
+    coupons = snap.exists() ? (snap.data().list || []) : [];
+  } catch(e) { coupons = []; }
+  renderCoupons();
+}
+
+async function saveCoupons() {
+  const ref = doc(db, 'coupons', 'all');
+  await setDoc(ref, { list: coupons });
+}
+
+function renderCoupons() {
+  const grid = document.getElementById('couponGrid');
+  if (!grid) return;
+  if (coupons.length === 0) {
+    grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:24px;color:var(--text-muted);font-size:13px">아직 쿠폰이 없어요.<br>+ 쿠폰 추가를 눌러 등록해보세요!</div>';
+    return;
+  }
+  const days = ['일','월','화','수','목','금','토'];
+  grid.innerHTML = coupons.map((c, i) => {
+    const isUsed = !!c.usedBy;
+    const imgHtml = c.image
+      ? `<img src="${c.image}" style="width:100%;height:100px;object-fit:cover;display:block">`
+      : `<div style="width:100%;height:100px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-muted)">사진 없음</div>`;
+    const usedDate = c.usedDate ? (() => { const d = new Date(c.usedDate); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`; })() : '';
+    return `
+      <div style="background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);position:relative;${isUsed?'opacity:0.45':''}">
+        ${isUsed?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">사용완료</div>`:''}
+        ${imgHtml}
+        <div style="padding:8px 10px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">${c.name}</div>
+          ${isUsed
+            ? `<div style="font-size:11px;color:#C62828;font-weight:500">${MEMBERS.find(m=>m.id===c.usedBy)?.emoji||''} ${MEMBERS.find(m=>m.id===c.usedBy)?.name||''} 사용</div>
+               <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">${usedDate}</div>`
+            : `<div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px">🟢 미사용</div>`
+          }
+          <div style="display:flex;gap:4px">
+            <button onclick="openUseModal(${i})" ${isUsed?'disabled':''} style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:700;background:${isUsed?'var(--bg)':'var(--primary-light)'};color:${isUsed?'var(--text-muted)':'var(--primary-dark)'};border:1px solid ${isUsed?'var(--border)':'var(--primary)'};cursor:${isUsed?'default':'pointer'}">${isUsed?'사용완료':'사용 완료'}</button>
+            <button onclick="deleteCoupon(${i})" style="padding:5px 8px;border-radius:6px;font-size:11px;color:#C62828;border:1px solid #FFCDD2;background:#FFF5F5;cursor:pointer">삭제</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.showCouponAdd = function() {
+  document.getElementById('couponModal').style.display = 'flex';
+  document.getElementById('couponName').value = '';
+  document.getElementById('couponImage').value = '';
+  document.getElementById('couponPreview').style.display = 'none';
+};
+
+window.hideCouponModal = function() {
+  document.getElementById('couponModal').style.display = 'none';
+};
+
+document.getElementById('couponImage')?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+      else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('couponPreviewImg').src = compressed;
+      document.getElementById('couponPreview').style.display = 'block';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+window.saveCoupon = async function() {
+  const name = document.getElementById('couponName').value.trim();
+  if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
+  const img = document.getElementById('couponPreviewImg').src;
+  const hasImg = document.getElementById('couponPreview').style.display !== 'none';
+  coupons.push({ id: Date.now(), name, image: hasImg ? img : null, usedBy: null, usedDate: null });
+  try {
+    await saveCoupons();
+    showToast('✅ 쿠폰이 추가됐어요!');
+    hideCouponModal();
+    renderCoupons();
+  } catch(e) { showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.'); }
+};
+
+window.deleteCoupon = async function(idx) {
+  if (!confirm(`"${coupons[idx].name}" 쿠폰을 삭제할까요?`)) return;
+  coupons.splice(idx, 1);
+  try {
+    await saveCoupons();
+    showToast('🗑️ 삭제됐어요');
+    renderCoupons();
+  } catch(e) { showToast('⚠️ 저장 실패'); }
+};
+
+window.openUseModal = function(idx) {
+  selectedUseId = idx;
+  selectedUseMember = null;
+  const btns = document.getElementById('useModalBtns');
+  btns.innerHTML = MEMBERS.map((m, i) => {
+    const isLast = i === MEMBERS.length - 1;
+    return `<button onclick="selectUseMember('${m.id}',this)" style="padding:10px;border-radius:8px;font-size:13px;border:1px solid var(--border);background:var(--bg);cursor:pointer;${isLast&&MEMBERS.length%2!==0?'grid-column:span 2':''}">${m.emoji} ${m.name}</button>`;
+  }).join('');
+  document.getElementById('useModal').style.display = 'flex';
+};
+
+window.selectUseMember = function(memberId, btn) {
+  selectedUseMember = memberId;
+  document.querySelectorAll('#useModalBtns button').forEach(b => {
+    b.style.background = 'var(--bg)';
+    b.style.color = 'var(--text)';
+    b.style.borderColor = 'var(--border)';
+  });
+  btn.style.background = 'var(--primary-light)';
+  btn.style.color = 'var(--primary-dark)';
+  btn.style.borderColor = 'var(--primary)';
+};
+
+window.hideUseModal = function() {
+  document.getElementById('useModal').style.display = 'none';
+  selectedUseId = null;
+  selectedUseMember = null;
+};
+
+window.confirmUse = async function() {
+  if (selectedUseId === null) return;
+  if (!selectedUseMember) { showToast('⚠️ 사용한 사람을 선택해주세요'); return; }
+  coupons[selectedUseId].usedBy = selectedUseMember;
+  coupons[selectedUseId].usedDate = new Date().toISOString();
+  try {
+    await saveCoupons();
+    showToast('✅ 사용 완료 처리됐어요!');
+    hideUseModal();
+    renderCoupons();
+  } catch(e) { showToast('⚠️ 저장 실패'); }
+};
+
 // ========== 탭 전환 ==========
 window.showTab = function(tab) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -766,7 +954,7 @@ window.showTab = function(tab) {
   document.querySelectorAll('.tab')[['home','ranking','stats','reward'].indexOf(tab)].classList.add('active');
   if (tab === 'ranking') loadRanking();
   if (tab === 'stats') { renderMemberBtns('statsMemberBtns', selectStatsMember, statsMember?.id); if (statsMember) selectStatsMember(statsMember); }
-  if (tab === 'reward') { renderMemberBtns('rewardMemberBtns', selectRewardMember, rewardMember?.id); if (rewardMember) selectRewardMember(rewardMember); loadMoneyTable(); }
+  if (tab === 'reward') { renderMemberBtns('rewardMemberBtns', selectRewardMember, rewardMember?.id); if (rewardMember) selectRewardMember(rewardMember); loadMoneyTable(); loadCoupons(); }
 };
 
 // ========== 토스트 ==========

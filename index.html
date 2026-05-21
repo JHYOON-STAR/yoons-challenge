@@ -265,6 +265,10 @@
       <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">🎟️ 쿠폰 추가</h3>
       <input id="couponName" type="text" placeholder="쿠폰 이름 입력" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;margin-bottom:10px;background:var(--bg);color:var(--text)">
       <div style="margin-bottom:10px">
+        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px">📅 사용 기한 (선택사항)</label>
+        <input id="couponExpiry" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:var(--bg);color:var(--text)">
+      </div>
+      <div style="margin-bottom:10px">
         <input id="couponImage" type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
         <button type="button" onclick="document.getElementById('couponImage').click()" style="width:100%;padding:10px;border-radius:8px;border:1px dashed var(--border);background:var(--bg);font-size:14px;font-weight:700;color:var(--text-muted);cursor:pointer">📷 사진 선택하기</button>
       </div>
@@ -292,7 +296,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.3 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.5 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -828,25 +832,50 @@ function renderCoupons() {
     return;
   }
   const days = ['일','월','화','수','목','금','토'];
+
+  // 한국 시간 기준 오늘 날짜
+  function getExpiryInfo(expiry) {
+    if (!expiry) return { html: '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📅 기한 없음</div>', isExpired: false };
+    const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+    const todayKST = kstNow.toISOString().slice(0, 10);
+    const diffMs = new Date(expiry) - new Date(todayKST);
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return { html: `<div style="font-size:10px;color:#C62828;font-weight:500;margin-bottom:6px">❌ ~${expiry} 만료됨</div>`, isExpired: true };
+    } else if (diffDays <= 7) {
+      return { html: `<div style="font-size:10px;color:#E65100;font-weight:500;margin-bottom:6px">⚠️ ~${expiry} D-${diffDays}</div>`, isExpired: false };
+    } else {
+      return { html: `<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📅 ~${expiry} <span style="color:var(--primary-dark)">D-${diffDays}</span></div>`, isExpired: false };
+    }
+  }
+
   grid.innerHTML = coupons.map((c, i) => {
     const isUsed = !!c.usedBy;
+    const expiryInfo = getExpiryInfo(c.expiry);
+    const isExpired = !isUsed && expiryInfo.isExpired;
     const imgHtml = c.image
-      ? `<img src="${c.image}" style="width:100%;height:100px;object-fit:cover;display:block;cursor:zoom-in" onclick="openImageViewer('${c.image.replace(/'/g,"\'")}','${c.name}')" >`
+      ? (isUsed
+          ? `<div onclick="showToast('✅ 이미 사용된 쿠폰이에요!')" style="width:100%;height:100px;background:#FFEBEE;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">
+               <div style="font-size:24px;margin-bottom:4px">🚫</div>
+               <div style="font-size:11px;color:#C62828;font-weight:700">사용 완료된 쿠폰</div>
+             </div>`
+          : `<img src="${c.image}" style="width:100%;height:100px;object-fit:cover;display:block;cursor:zoom-in" onclick="openImageViewer('${c.image.replace(/'/g,"\'")}','${c.name}')" >`)
       : `<div style="width:100%;height:100px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-muted)">사진 없음</div>`;
     const usedDate = c.usedDate ? (() => { const d = new Date(c.usedDate); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`; })() : '';
     return `
-      <div style="background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);position:relative;${isUsed?'opacity:0.45':''}">
-        ${isUsed?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">사용완료</div>`:''}
+      <div style="background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);position:relative;${isUsed||isExpired?'opacity:0.45':''}">
+        ${isUsed?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">사용완료</div>`
+        : isExpired?`<div style="position:absolute;top:6px;left:6px;background:#FFCDD2;color:#C62828;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2">기한만료</div>`:''}
         ${imgHtml}
         <div style="padding:8px 10px">
           <div style="font-size:13px;font-weight:700;margin-bottom:2px">${c.name}</div>
           ${isUsed
             ? `<div style="font-size:11px;color:#C62828;font-weight:500">${MEMBERS.find(m=>m.id===c.usedBy)?.emoji||''} ${MEMBERS.find(m=>m.id===c.usedBy)?.name||''} 사용</div>
                <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">${usedDate}</div>`
-            : `<div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px">🟢 미사용</div>`
+            : `<div style="font-size:11px;color:var(--primary-dark);margin-bottom:2px">🟢 미사용</div>${expiryInfo.html}`
           }
           <div style="display:flex;gap:4px">
-            <button onclick="openUseModal(${i})" ${isUsed?'disabled':''} style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:700;background:${isUsed?'var(--bg)':'var(--primary-light)'};color:${isUsed?'var(--text-muted)':'var(--primary-dark)'};border:1px solid ${isUsed?'var(--border)':'var(--primary)'};cursor:${isUsed?'default':'pointer'}">${isUsed?'사용완료':'사용 완료'}</button>
+            <button onclick="openUseModal(${i})" ${isUsed||isExpired?'disabled':''} style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:700;background:${isUsed||isExpired?'var(--bg)':'var(--primary-light)'};color:${isUsed||isExpired?'var(--text-muted)':'var(--primary-dark)'};border:1px solid ${isUsed||isExpired?'var(--border)':'var(--primary)'};cursor:${isUsed||isExpired?'default':'pointer'}">${isUsed?'사용완료':isExpired?'기한만료':'사용 완료'}</button>
             <button onclick="deleteCoupon(${i})" style="padding:5px 8px;border-radius:6px;font-size:11px;color:#C62828;border:1px solid #FFCDD2;background:#FFF5F5;cursor:pointer">삭제</button>
           </div>
         </div>
@@ -870,8 +899,10 @@ window.closeImageViewer = function() {
 window.showCouponAdd = function() {
   document.getElementById('couponModal').style.display = 'flex';
   document.getElementById('couponName').value = '';
+  document.getElementById('couponExpiry').value = '';
   document.getElementById('couponImage').value = '';
   document.getElementById('couponPreview').style.display = 'none';
+  couponImageBase64 = null;
 };
 
 window.hideCouponModal = function() {
@@ -898,7 +929,8 @@ window.saveCoupon = async function() {
   const name = document.getElementById('couponName').value.trim();
   if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
   const hasImg = document.getElementById('couponPreview').style.display !== 'none';
-  coupons.push({ id: Date.now(), name, image: hasImg ? couponImageBase64 : null, usedBy: null, usedDate: null });
+  const expiry = document.getElementById('couponExpiry').value || null;
+  coupons.push({ id: Date.now(), name, image: hasImg ? couponImageBase64 : null, expiry, usedBy: null, usedDate: null });
   try {
     await saveCoupons();
     showToast('✅ 쿠폰이 추가됐어요!');

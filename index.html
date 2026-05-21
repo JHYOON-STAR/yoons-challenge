@@ -297,7 +297,65 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.1 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.3 · 2026.05.20</div>
+
+<script>
+// PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
+let pinEntered = '';
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById('dot' + i);
+    if (el) el.classList.toggle('filled', i < pinEntered.length);
+  }
+}
+
+function unlockApp() {
+  const ps = document.getElementById('pinScreen');
+  if (ps) ps.style.display = 'none';
+  sessionStorage.setItem('pinPassed', '1');
+}
+
+function pinInput(num) {
+  if (pinEntered.length >= 4) return;
+  pinEntered += num;
+  updatePinDots();
+  if (pinEntered.length === 4) {
+    setTimeout(async () => {
+      // Firebase에서 PIN 가져오기 (window._loadPin이 준비된 경우)
+      if (window._getStoredPin) {
+        const storedPin = await window._getStoredPin();
+        if (pinEntered === storedPin) {
+          unlockApp();
+        } else {
+          document.getElementById('pinError').textContent = '❌ 비밀번호가 틀렸어요!';
+          pinEntered = '';
+          updatePinDots();
+          setTimeout(() => document.getElementById('pinError').textContent = '', 1500);
+        }
+      }
+    }, 200);
+  }
+}
+
+function pinDelete() {
+  pinEntered = pinEntered.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function tryFingerprint() {
+  if (window._tryFingerprint) window._tryFingerprint();
+}
+
+// 이미 인증된 경우 PIN 화면 건너뜀
+if (sessionStorage.getItem('pinPassed') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const ps = document.getElementById('pinScreen');
+    if (ps) ps.style.display = 'none';
+  });
+}
+</script>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -332,7 +390,7 @@ const MISSIONS = [
   { id: 'meals',      name: '세끼 챙겨먹기',     emoji: '🍱', desc: '아침·점심·저녁 모두 챙기기',           points: 3 },
   { id: 'nosnack',    name: '야식 안 먹기',      emoji: '🚫', desc: '저녁 식사 후 야식 금지',               points: 1 },
   { id: 'sleep',      name: '자정 이전 취침',    emoji: '🌙', desc: '자정 12시 전에 잠들기',                points: 2 },
-  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '낮잠 1시간 이내 가능',                 points: 1 },
+  { id: 'nonap',      name: '낮잠 안자기',       emoji: '☀️', desc: '누워서 30분 이상 쉬면 낮잠으로 인정', points: 1 },
   { id: 'room',       name: '방 정리',           emoji: '🧹', desc: '하루 한 번 방 깔끔하게 정리',          points: 6 },
   { id: 'nodelivery', name: '배달 음식 안먹기',  emoji: '🛵', desc: '배달 음식 시키지 않기',                points: 1 },
   { id: 'nosnacks',   name: '간식(과자) 안먹기', emoji: '🍪', desc: '과자 등 간식 먹지 않기',               points: 2 },
@@ -1043,60 +1101,24 @@ function showToast(msg) {
 }
 
 // ========== PIN + 지문인식 ==========
-let pinEntered = '';
 let storedPin = '';
 
-// Firebase에서 PIN 불러오기
-async function loadPin() {
+// Firebase에서 PIN 불러오기 - 전역으로 노출
+window._getStoredPin = async function() {
   try {
     const ref = doc(db, 'settings', 'pin');
     const snap = await getDoc(ref);
     if (snap.exists() && snap.data().code) {
-      storedPin = snap.data().code;
+      return snap.data().code;
     }
   } catch(e) { }
-}
-
-function unlockApp() {
-  document.getElementById('pinScreen').style.display = 'none';
-  sessionStorage.setItem('pinPassed', '1');
-}
-
-window.pinInput = function(num) {
-  if (pinEntered.length >= 4) return;
-  pinEntered += num;
-  updatePinDots();
-  if (pinEntered.length === 4) {
-    setTimeout(async () => {
-      await loadPin();
-      if (pinEntered === storedPin) {
-        unlockApp();
-      } else {
-        document.getElementById('pinError').textContent = '❌ 비밀번호가 틀렸어요!';
-        pinEntered = '';
-        updatePinDots();
-        setTimeout(() => document.getElementById('pinError').textContent = '', 1500);
-      }
-    }, 200);
-  }
+  return '';
 };
-
-window.pinDelete = function() {
-  pinEntered = pinEntered.slice(0, -1);
-  updatePinDots();
-  document.getElementById('pinError').textContent = '';
-};
-
-function updatePinDots() {
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('dot' + i).classList.toggle('filled', i < pinEntered.length);
-  }
-}
 
 // ========== 지문 인식 ==========
 const FP_CRED_KEY = 'fp_credential_id';
 
-window.tryFingerprint = async function() {
+window._tryFingerprint = async function() {
   const hintEl = document.getElementById('fingerprintHint');
   if (!window.PublicKeyCredential) {
     hintEl.textContent = '❌ 이 브라우저는 지문인식을 지원하지 않아요';
@@ -1184,12 +1206,9 @@ async function authenticateFingerprint(credIdB64) {
 const hasFP = !!localStorage.getItem(FP_CRED_KEY);
 document.getElementById('fingerprintHint').textContent = hasFP ? '👆 버튼으로 지문 인식 가능' : '👆 버튼으로 지문 등록 가능';
 
-// 이미 인증된 경우 PIN 화면 건너뜀
-if (sessionStorage.getItem('pinPassed') === '1') {
-  document.getElementById('pinScreen').style.display = 'none';
-} else if (hasFP) {
-  // 지문 등록된 기기면 자동으로 지문 인식 시도
-  setTimeout(() => tryFingerprint(), 500);
+// 지문 등록된 기기면 자동으로 지문 인식 시도
+if (sessionStorage.getItem('pinPassed') !== '1' && hasFP) {
+  setTimeout(() => window._tryFingerprint && window._tryFingerprint(), 500);
 }
 
 // ========== 초기화 ==========

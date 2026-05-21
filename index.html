@@ -292,7 +292,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.2 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v3.3 · 2026.05.20</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -876,21 +876,20 @@ window.showCouponAdd = function() {
 
 window.hideCouponModal = function() {
   document.getElementById('couponModal').style.display = 'none';
+  couponImageBase64 = null;
+  document.getElementById('couponPreview').style.display = 'none';
 };
 
+let couponImageBase64 = null;
 document.getElementById('couponImage')?.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 3 * 1024 * 1024) {
-    showToast('⚠️ 사진이 너무 커요! 3MB 이하 사진을 선택해주세요');
-    return;
-  }
-  const url = URL.createObjectURL(file);
-  document.getElementById('couponPreviewImg').src = url;
-  document.getElementById('couponPreview').style.display = 'block';
+  couponImageBase64 = null;
   const reader = new FileReader();
   reader.onload = function(ev) {
-    document.getElementById('couponPreviewImg')._base64 = ev.target.result;
+    couponImageBase64 = ev.target.result;
+    document.getElementById('couponPreviewImg').src = couponImageBase64;
+    document.getElementById('couponPreview').style.display = 'block';
   };
   reader.readAsDataURL(file);
 });
@@ -898,10 +897,8 @@ document.getElementById('couponImage')?.addEventListener('change', function(e) {
 window.saveCoupon = async function() {
   const name = document.getElementById('couponName').value.trim();
   if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
-  const previewEl = document.getElementById('couponPreviewImg');
   const hasImg = document.getElementById('couponPreview').style.display !== 'none';
-  const imgData = hasImg ? (previewEl._base64 || previewEl.src) : null;
-  coupons.push({ id: Date.now(), name, image: imgData, usedBy: null, usedDate: null });
+  coupons.push({ id: Date.now(), name, image: hasImg ? couponImageBase64 : null, usedBy: null, usedDate: null });
   try {
     await saveCoupons();
     showToast('✅ 쿠폰이 추가됐어요!');

@@ -49,6 +49,8 @@
   .mission-slide-bg.uncheck { background:#FFEBEE; color:#C62828; justify-content:flex-start; padding-left:16px; }
   .mission-inner { display:flex; align-items:center; gap:12px; padding:12px 10px; position:relative; z-index:2; background:var(--card); width:100%; border-radius:8px; transition:transform 0.1s ease, box-shadow 0.1s ease; }
   .mission-inner.sliding { transform:scale(1.08) translateY(-8px); box-shadow:0 12px 28px rgba(0,0,0,0.25); z-index:10; }
+  .mission-inner.flash-green { background:#C8E6C9 !important; transition:background 0s; }
+  .mission-inner.flash-done { background:var(--card) !important; transition:background 0.4s ease; }
   .mission-emoji { font-size: 24px; width: 36px; text-align: center; }
   .mission-info { flex: 1; }
   .mission-name { font-size: 14px; font-weight: 700; }
@@ -311,7 +313,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.2 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.3 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -660,6 +662,23 @@ function initSlideEvents() {
   });
 }
 
+function flashCheck(missionId, isDone) {
+  const row = document.getElementById('mrow_' + missionId);
+  if (!row) return;
+  const inner = row.querySelector('.mission-inner');
+  if (!inner) return;
+  if (isDone) {
+    inner.classList.add('flash-green');
+    setTimeout(() => {
+      inner.classList.remove('flash-green');
+      inner.classList.add('flash-done');
+      setTimeout(() => inner.classList.remove('flash-done'), 400);
+    }, 120);
+    // 갤럭시(안드로이드)만 진동
+    if (navigator.vibrate) navigator.vibrate(40);
+  }
+}
+
 window.toggleMission = async function(missionId) {
   if (!currentMember) return;
   todayChecks[missionId] = !todayChecks[missionId];
@@ -670,6 +689,7 @@ window.toggleMission = async function(missionId) {
   const fillEl = document.querySelector('.progress-fill');
   if (scoreEl) scoreEl.textContent = score;
   if (fillEl) fillEl.style.width = Math.round(score / MAX_DAILY * 100) + '%';
+  flashCheck(missionId, todayChecks[missionId]);
   try {
     await saveChecks(currentMember.id, getTargetDate(), todayChecks);
     showToast(todayChecks[missionId] ? '✅ 완료!' : '↩️ 취소됨');

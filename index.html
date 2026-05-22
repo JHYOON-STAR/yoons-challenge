@@ -310,7 +310,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.8 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.9 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -595,18 +595,33 @@ function initSlideEvents() {
     const bgCheck = row.querySelector('.mission-slide-bg.check');
     const bgUncheck = row.querySelector('.mission-slide-bg.uncheck');
     const THRESHOLD = 65;
-    let startX = 0, currentX = 0, isDragging = false;
+    let startX = 0, startY = 0, currentX = 0, isDragging = false, isScrolling = null;
 
-    function onStart(x) { startX = x; currentX = 0; isDragging = true; inner.style.transition = 'none'; }
-    function onMove(x) {
+    function reset() {
+      isDragging = false; isScrolling = null; currentX = 0;
+      inner.style.transition = 'transform 0.2s ease';
+      inner.style.transform = 'translateX(0)';
+      bgCheck.style.opacity = 0; bgUncheck.style.opacity = 0;
+    }
+
+    function onMove(x, y) {
       if (!isDragging) return;
-      currentX = x - startX;
+      const dx = x - startX;
+      const dy = y - startY;
+      if (isScrolling === null) {
+        // 처음 움직임 방향으로 수직/수평 결정
+        if (Math.abs(dy) > Math.abs(dx)) { isScrolling = true; reset(); return; }
+        else { isScrolling = false; }
+      }
+      if (isScrolling) return;
+      currentX = dx;
       inner.style.transform = `translateX(${currentX}px)`;
       if (currentX > 0) { bgCheck.style.opacity = Math.min(1, currentX/THRESHOLD); bgUncheck.style.opacity = 0; }
       else { bgUncheck.style.opacity = Math.min(1, Math.abs(currentX)/THRESHOLD); bgCheck.style.opacity = 0; }
     }
+
     async function onEnd() {
-      if (!isDragging) return;
+      if (!isDragging || isScrolling) { reset(); return; }
       isDragging = false;
       inner.style.transition = 'transform 0.2s ease';
       bgCheck.style.opacity = 0; bgUncheck.style.opacity = 0;
@@ -614,12 +629,31 @@ function initSlideEvents() {
       else if (currentX < -THRESHOLD && todayChecks[m.id]) { inner.style.transform = 'translateX(0)'; await toggleMission(m.id); }
       else { inner.style.transform = 'translateX(0)'; }
     }
-    row.addEventListener('mousedown', e => onStart(e.clientX));
-    document.addEventListener('mousemove', e => { if (isDragging) onMove(e.clientX); });
+
+    // 마우스
+    row.addEventListener('mousedown', e => { startX = e.clientX; startY = e.clientY; currentX = 0; isDragging = true; isScrolling = null; inner.style.transition = 'none'; });
+    document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
     document.addEventListener('mouseup', onEnd);
-    row.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
-    row.addEventListener('touchmove', e => { if (isDragging) { e.preventDefault(); onMove(e.touches[0].clientX); } }, { passive: false });
+
+    // 터치
+    row.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      currentX = 0; isDragging = true; isScrolling = null;
+      inner.style.transition = 'none';
+    }, { passive: true });
+    row.addEventListener('touchmove', e => {
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (isScrolling === null) {
+        isScrolling = dy > dx;
+      }
+      if (!isScrolling) {
+        e.preventDefault();
+        onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
     row.addEventListener('touchend', onEnd);
+    row.addEventListener('touchcancel', reset);
   });
 }
 

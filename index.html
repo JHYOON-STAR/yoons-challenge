@@ -109,6 +109,47 @@
   .week-nav-range { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .consolation-box { background: linear-gradient(135deg, #FFF8E1, #FFF3E0); border: 2px solid #FFE082; border-radius: var(--radius); padding: 16px; margin-top: 12px; text-align: center; }
   .consolation-box.none { background: var(--bg); border: 1px solid var(--border); }
+
+  /* 슬라이드 체크 */
+  .mission-item {
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .mission-item:last-child { border-bottom: none; }
+  .mission-item:active { cursor: grabbing; }
+  .mission-slide-bg-check {
+    position: absolute;
+    left: 0; top: 0; bottom: 0; right: 0;
+    background: var(--primary-light);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 16px;
+    font-size: 13px; font-weight: 700;
+    color: var(--primary-dark);
+    z-index: 1;
+  }
+  .mission-slide-bg-uncheck {
+    position: absolute;
+    left: 0; top: 0; bottom: 0; right: 0;
+    background: #FFEBEE;
+    display: flex; align-items: center; justify-content: flex-start;
+    padding-left: 16px;
+    font-size: 13px; font-weight: 700;
+    color: #C62828;
+    z-index: 1;
+  }
+  .mission-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    background: var(--card);
+    user-select: none;
+    -webkit-user-select: none;
+  }
 </style>
 </head>
 <body>
@@ -299,7 +340,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.6 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v4.7 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -557,18 +598,62 @@ function renderMissions() {
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       </div>
       ${MISSIONS.map(m => `
-        <div class="mission-item" onclick="toggleMission('${m.id}')">
-          <div class="mission-emoji">${m.emoji}</div>
-          <div class="mission-info">
-            <div class="mission-name">${m.name}</div>
-            <div class="mission-desc">${m.desc} (+${m.points}점)</div>
+        <div class="mission-item" id="mrow_${m.id}">
+          <div class="mission-slide-bg-check">체크! ✓</div>
+          <div class="mission-slide-bg-uncheck">✕ 해제</div>
+          <div class="mission-inner">
+            <div class="mission-emoji">${m.emoji}</div>
+            <div class="mission-info">
+              <div class="mission-name">${m.name}</div>
+              <div class="mission-desc">${m.desc} (+${m.points}점)</div>
+            </div>
+            <div class="mission-check ${todayChecks[m.id] ? 'done' : ''}" id="check_${m.id}">${todayChecks[m.id] ? '✓' : ''}</div>
           </div>
-          <div class="mission-check ${todayChecks[m.id] ? 'done' : ''}" id="check_${m.id}">${todayChecks[m.id] ? '✓' : ''}</div>
         </div>
       `).join('')}
       <div class="cheer-box">${cheer}</div>
-      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:center">${dayOffset === 0 ? '📅 오늘' : '📝 어제'} · 오늘/어제만 수정 가능</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:center">${dayOffset === 0 ? '📅 오늘' : '📝 어제'} · 오늘/어제만 수정 가능 · 밀어서 체크</div>
     </div>`;
+
+  // 슬라이드 이벤트 등록
+  MISSIONS.forEach(m => {
+    const row = document.getElementById('mrow_' + m.id);
+    if (!row) return;
+    const inner = row.querySelector('.mission-inner');
+    const THRESHOLD = 65;
+    let startX = 0, currentX = 0, isDragging = false;
+
+    function onStart(x) {
+      startX = x; currentX = 0; isDragging = true;
+      inner.style.transition = 'none';
+    }
+    function onMove(x) {
+      if (!isDragging) return;
+      currentX = x - startX;
+      inner.style.transform = `translateX(${currentX}px)`;
+    }
+    async function onEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      inner.style.transition = 'transform 0.2s ease';
+      if (currentX > THRESHOLD && !todayChecks[m.id]) {
+        inner.style.transform = 'translateX(0)';
+        await toggleMission(m.id);
+      } else if (currentX < -THRESHOLD && todayChecks[m.id]) {
+        inner.style.transform = 'translateX(0)';
+        await toggleMission(m.id);
+      } else {
+        inner.style.transform = 'translateX(0)';
+      }
+    }
+
+    row.addEventListener('mousedown', e => onStart(e.clientX));
+    document.addEventListener('mousemove', e => { if (isDragging) onMove(e.clientX); });
+    document.addEventListener('mouseup', onEnd);
+    row.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+    row.addEventListener('touchmove', e => onMove(e.touches[0].clientX), { passive: true });
+    row.addEventListener('touchend', onEnd);
+  });
 }
 
 window.toggleMission = async function(missionId) {

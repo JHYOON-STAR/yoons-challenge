@@ -47,8 +47,8 @@
   .mission-slide-bg { position: absolute; left:0; top:0; bottom:0; right:0; display:flex; align-items:center; font-size:13px; font-weight:700; z-index:1; opacity:0; }
   .mission-slide-bg.check { background:var(--primary-light); color:var(--primary-dark); justify-content:flex-end; padding-right:16px; }
   .mission-slide-bg.uncheck { background:#FFEBEE; color:#C62828; justify-content:flex-start; padding-left:16px; }
-  .mission-inner { display:flex; align-items:center; gap:12px; padding:12px 10px; position:relative; z-index:2; background:var(--card); width:100%; border-radius:8px; box-shadow:2px 2px 6px rgba(0,0,0,0.10),-1px -1px 3px rgba(255,255,255,0.8); transition:box-shadow 0.15s,transform 0.15s; }
-  .mission-inner.sliding { box-shadow:4px 4px 12px rgba(0,0,0,0.18),-2px -2px 6px rgba(255,255,255,0.9); transform:scale(1.012); }
+  .mission-inner { display:flex; align-items:center; gap:12px; padding:12px 10px; position:relative; z-index:2; background:var(--card); width:100%; border-radius:8px; transition:transform 0.15s ease, box-shadow 0.15s ease; transform:scale(1) translateY(0); }
+  .mission-inner.sliding { transform:scale(1.04) translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.15); }
   .mission-emoji { font-size: 24px; width: 36px; text-align: center; }
   .mission-info { flex: 1; }
   .mission-name { font-size: 14px; font-weight: 700; }
@@ -311,7 +311,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.0 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.1 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능

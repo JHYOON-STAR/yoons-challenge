@@ -128,6 +128,23 @@
 </head>
 <body>
 
+<!-- 주간 결과 팝업 -->
+<div id="weeklyResultOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:white;border-radius:20px;overflow:hidden;width:100%;max-width:380px;margin:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+    <div style="background:linear-gradient(135deg,#2E7D32,#43A047);padding:24px 16px;text-align:center">
+      <div style="font-size:36px;margin-bottom:8px">🏆</div>
+      <div style="font-size:18px;font-weight:700;color:white;" id="weeklyResultTitle">주간 결과</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px" id="weeklyResultPeriod"></div>
+    </div>
+    <div style="padding:16px">
+      <div id="weeklyResultList"></div>
+      <div id="weeklyResultAvg" style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;border:1px solid #C8E6C9"></div>
+      <div id="weeklyConsolation" style="display:none;background:linear-gradient(135deg,#E3F2FD,#E8F5E9);border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;border:1px solid #90CAF9"></div>
+      <button onclick="closeWeeklyResult()" style="width:100%;padding:15px;border-radius:12px;background:linear-gradient(135deg,#2E7D32,#43A047);color:white;border:none;font-size:15px;font-weight:700;cursor:pointer">🚀 새로운 한 주 시작!</button>
+    </div>
+  </div>
+</div>
+
 <!-- PIN 화면 -->
 <div class="pin-screen" id="pinScreen">
   <h1>🏆 윤패밀리 챌린지</h1>
@@ -314,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.8 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.9 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -1320,8 +1337,98 @@ if (sessionStorage.getItem('pinPassed') !== '1' && hasFP) {
   setTimeout(() => window._tryFingerprint && window._tryFingerprint(), 500);
 }
 
+// ========== 주간 결과 팝업 ==========
+window.closeWeeklyResult = function() {
+  document.getElementById('weeklyResultOverlay').style.display = 'none';
+  const lastWeekKey = localStorage.getItem('lastResultShown');
+  localStorage.setItem('lastResultShown', lastWeekKey);
+};
+
+async function checkAndShowWeeklyResult() {
+  // KST 기준 오늘이 월요일인지 확인
+  const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+  const dayOfWeek = kstNow.getUTCDay(); // 1=월요일
+  if (dayOfWeek !== 1) return; // 월요일에만 표시
+
+  // 지난 주 일요일 날짜 계산
+  const lastSunday = new Date(kstNow);
+  lastSunday.setUTCDate(kstNow.getUTCDate() - 1);
+  const lastSundayStr = getKSTDateStr(lastSunday);
+
+  // 이미 이번 주 결과를 봤으면 건너뜀
+  const lastShown = localStorage.getItem('lastResultShown');
+  if (lastShown === lastSundayStr) return;
+  localStorage.setItem('lastResultShown', lastSundayStr);
+
+  // 지난 주 데이터 계산
+  const results = await Promise.all(
+    MEMBERS.map(async m => {
+      const { score, pct, maxPossible } = await getWeekData(m.id, -1);
+      const reward = calcWeekReward(score);
+      return { ...m, score, pct, maxPossible, reward };
+    })
+  );
+  results.sort((a, b) => b.pct - a.pct || b.score - a.score);
+
+  // 지난 주 기간 표시
+  const wStart = getWeekStartDate(-1);
+  const wEnd = new Date(wStart); wEnd.setUTCDate(wStart.getUTCDate() + 6);
+  const wStartStr = getKSTDateStr(wStart);
+  const wEndStr = getKSTDateStr(wEnd);
+  document.getElementById('weeklyResultTitle').textContent =
+    `${wStartStr.slice(5,7)}월 ${Math.ceil(parseInt(wStartStr.slice(8,10))/7)}주차 결과!`;
+  document.getElementById('weeklyResultPeriod').textContent =
+    `${wStartStr.slice(5).replace('-','/')} ~ ${wEndStr.slice(5).replace('-','/')}`;
+
+  // 랭킹 목록
+  const medals = ['🥇','🥈','🥉','4','5'];
+  const rankColors = ['#FFB300','#9E9E9E','#CD7F32','#ccc','#ccc'];
+  const isFirst = [true, false, false, false, false];
+  document.getElementById('weeklyResultList').innerHTML = results.map((m, i) => `
+    <div style="background:${isFirst[i]?'linear-gradient(135deg,#FFF8E1,#FFF3E0)':'#F5F5F5'};border-radius:12px;padding:13px;margin-bottom:8px;display:flex;align-items:center;gap:10px;${isFirst[i]?'border:1px solid #FFE082':''}">
+      <div style="font-size:${i<3?'24':'16'}px;width:26px;text-align:center;color:${rankColors[i]};font-weight:700">${medals[i]}</div>
+      <div style="font-size:24px">${m.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:${isFirst[i]?'#1B5E20':'#333'}">${m.name}</div>
+        <div style="background:#E0E0E0;border-radius:4px;height:5px;overflow:hidden;margin:4px 0">
+          <div style="height:100%;width:${m.pct}%;background:linear-gradient(90deg,#4CAF50,#8BC34A);border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:${isFirst[i]?'#558B2F':'#888'}">${m.score}점 / ${m.maxPossible}점 · ${m.pct}%</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${m.reward > 0
+          ? `<div style="font-size:16px;font-weight:700;color:#E65100">+${m.reward/10000}만원</div>`
+          : `<div style="font-size:12px;color:#999">해당없음</div>`}
+      </div>
+    </div>
+  `).join('');
+
+  // 가족 평균
+  const avgPct = Math.round(results.reduce((s,m) => s+m.pct, 0) / results.length);
+  document.getElementById('weeklyResultAvg').innerHTML = `
+    <div style="font-size:12px;color:#558B2F;margin-bottom:6px">👨‍👩‍👧‍👦 가족 평균 달성률</div>
+    <div style="font-size:26px;font-weight:700;color:#2E7D32">${avgPct}%</div>
+  `;
+
+  // 위로 보상 확인
+  const top = results[0];
+  const allUnder100 = results.every(m => m.score < 100);
+  const consolEl = document.getElementById('weeklyConsolation');
+  if (allUnder100 && top.score >= 85) {
+    consolEl.style.display = 'block';
+    consolEl.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#1565C0;margin-bottom:4px">🎖️ 위로 보상!</div>
+      <div style="font-size:12px;color:#0D47A1">${top.emoji} ${top.name}이(가) 1등으로 열심히 했어요!<br>💵 위로 3만원</div>
+    `;
+  }
+
+  // 팝업 표시
+  document.getElementById('weeklyResultOverlay').style.display = 'flex';
+}
+
 // ========== 초기화 ==========
 checkAndAddWeeklyReward();
+checkAndShowWeeklyResult();
 renderMemberBtns('memberBtns', selectMember, null);
 renderMemberBtns('rewardMemberBtns', selectRewardMember, null);
 const lastMemberId = localStorage.getItem('lastMember');

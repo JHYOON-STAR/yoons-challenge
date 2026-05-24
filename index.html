@@ -314,7 +314,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.4 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.8 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -443,12 +443,14 @@ function getKSTDateStr(date) {
 const todayStr = getKSTDateStr(today);
 
 function getWeekStartDate(offsetWeeks = 0) {
-  const d = new Date(today.getTime() + 9 * 60 * 60 * 1000);
-  const day = d.getDay();
+  // KST 기준 이번 주 월요일 계산
+  const kstNow = new Date(today.getTime() + 9 * 60 * 60 * 1000);
+  const day = kstNow.getUTCDay(); // KST 요일
   const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff + offsetWeeks * 7);
-  d.setHours(0,0,0,0);
-  return d;
+  const result = new Date(kstNow);
+  result.setUTCDate(kstNow.getUTCDate() + diff + offsetWeeks * 7);
+  result.setUTCHours(0, 0, 0, 0);
+  return result;
 }
 
 function formatDateKR(d) {
@@ -456,8 +458,7 @@ function formatDateKR(d) {
 }
 
 function formatDate(d) {
-  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return `${kst.getFullYear()}년 ${kst.getMonth()+1}월 ${kst.getDate()}일 (${['일','월','화','수','목','금','토'][kst.getDay()]})`;
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
 }
 document.getElementById('headerDate').textContent = formatDate(today);
 
@@ -482,7 +483,8 @@ async function getWeekData(memberId, offsetWeeks = 0) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
+    // KST 기준 날짜 문자열 생성
+    const dateStr = getKSTDateStr(d);
     const isFuture = dateStr > todayStr;
     let score = 0;
     if (!isFuture) {
@@ -529,12 +531,14 @@ function getTargetDate() {
 }
 
 function updateDayNav() {
-  const d = new Date(today);
+  // KST 기준 날짜 계산
+  const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+  const d = new Date(kstNow);
   d.setDate(d.getDate() + dayOffset);
   const days = ['일','월','화','수','목','금','토'];
   const label = dayOffset === 0 ? '오늘' : dayOffset === -1 ? '어제' : `${Math.abs(dayOffset)}일 전`;
   document.getElementById('dayLabel').textContent = label;
-  document.getElementById('dayDate').textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})`;
+  document.getElementById('dayDate').textContent = `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}.${String(d.getUTCDate()).padStart(2,'0')} (${days[d.getUTCDay()]})`;
   document.getElementById('prevDayBtn').disabled = dayOffset <= -1;
   document.getElementById('nextDayBtn').disabled = dayOffset >= 0;
 }
@@ -763,7 +767,7 @@ async function loadRanking() {
 
   // 오늘/마지막날 현황
   const todayEl = document.getElementById('todayRanking');
-  const checkDate = isCurrentWeek ? todayStr : wEnd.toISOString().slice(0,10);
+  const checkDate = isCurrentWeek ? todayStr : getKSTDateStr(wEnd);
   const todayScores = await Promise.all(
     MEMBERS.map(async m => {
       const checks = await getChecks(m.id, checkDate);
@@ -823,7 +827,7 @@ async function renderMissionStats(memberId) {
   let daysCount = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = getKSTDateStr(d);
     if (dateStr > todayStr) break;
     daysCount++;
     const checks = await getChecks(memberId, dateStr);
@@ -903,20 +907,14 @@ window.processPay = async function() {
 // 매주 일요일 자정에 상금 자동 합산 (앱 열 때 체크)
 async function checkAndAddWeeklyReward() {
   const lastCheck = localStorage.getItem('lastRewardCheck');
-  const thisWeekEnd = (() => {
-    const d = new Date(today);
-    const day = d.getDay();
-    const diff = day === 0 ? 0 : 7 - day;
-    d.setDate(d.getDate() - (7 - diff) - (diff === 0 ? 7 : 0));
-    d.setDate(d.getDate() + 6);
-    return d.toISOString().slice(0, 10);
-  })();
+  // KST 기준 지난 주 일요일 날짜
   const lastWeekEnd = (() => {
-    const d = new Date(today);
-    const day = d.getDay();
+    const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+    const day = kstNow.getUTCDay();
     const diff = day === 0 ? 7 : day;
-    d.setDate(d.getDate() - diff);
-    return d.toISOString().slice(0, 10);
+    const d = new Date(kstNow);
+    d.setUTCDate(kstNow.getUTCDate() - diff);
+    return getKSTDateStr(d);
   })();
   if (lastCheck === lastWeekEnd) return;
   for (const m of MEMBERS) {

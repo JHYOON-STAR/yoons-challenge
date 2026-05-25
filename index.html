@@ -331,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v5.9 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.0 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -914,6 +914,8 @@ window.processPay = async function() {
   if (!memberId) { showToast('⚠️ 멤버를 선택해주세요'); return; }
   try {
     const money = await getMoneyData(memberId);
+    // 지급 시 누적금액(earned)과 보상금액(paid) 동시에 증가
+    money.earned = (money.earned || 0) + amount;
     money.paid = (money.paid || 0) + amount;
     await saveMoneyData(memberId, money);
     showToast('✅ 지급 처리 완료!');

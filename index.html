@@ -331,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.0 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.3 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -767,19 +767,23 @@ async function loadRanking() {
 
   // 위로 보상 조건
   const top = weekScores[0];
-  const allUnder80 = weekScores.every(m => m.score < 100);
+  const anyOver100 = weekScores.some(m => m.score >= 100);
+  const allUnder100 = !anyOver100;
   const consolBox = document.getElementById('consolationBox');
-  if (allUnder80 && top.score >= 85) {
+  if (anyOver100) {
+    // 보상 달성자 있음
+    consolBox.innerHTML = `<div class="consolation-box none"><div style="font-size:13px;color:var(--text-muted)">✅ 보상 달성자가 있어요! 위로 보상 해당 없음</div></div>`;
+  } else if (allUnder100 && top.score >= 85) {
+    // 아무도 100점 미달이지만 1등이 85점 이상 → 위로 보상
     consolBox.innerHTML = `
       <div class="consolation-box">
         <div style="font-size:24px;margin-bottom:6px">🎖️</div>
         <div style="font-weight:700;font-size:15px;color:#E65100;margin-bottom:6px">위로 보상 해당!</div>
         <div style="font-size:13px;color:#BF360C">아무도 100점을 못 넘었지만<br><strong>${top.name}</strong>이(가) 1등(${top.score}점)으로 열심히 했어요!<br><br>💵 위로 3만원 보상!</div>
       </div>`;
-  } else if (allUnder80 && top.score < 70) {
-    consolBox.innerHTML = `<div class="consolation-box none"><div style="font-size:13px;color:var(--text-muted)">😅 이번 주는 모두 아쉬웠어요...<br>다음 주엔 다 같이 힘내봐요!</div></div>`;
   } else {
-    consolBox.innerHTML = `<div class="consolation-box none"><div style="font-size:13px;color:var(--text-muted)">✅ 보상 달성자가 있어요! 위로 보상 해당 없음</div></div>`;
+    // 아무도 100점 미달 + 1등도 85점 미만
+    consolBox.innerHTML = `<div class="consolation-box none"><div style="font-size:13px;color:var(--text-muted)">😅 이번 주는 모두 아쉬웠어요...<br>다음 주엔 다 같이 힘내봐요!</div></div>`;
   }
 
   // 오늘/마지막날 현황
@@ -901,7 +905,7 @@ async function loadMoneyTable() {
     return `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:12px;${isLast?'':'border-bottom:1px solid var(--border)'};align-items:center">
         <span style="font-size:14px;font-weight:700">${m.emoji} ${m.name}</span>
-        <span style="font-size:13px;text-align:center;color:var(--text-muted)">${(m.earned/10000).toFixed(0)}만원</span>
+        <span style="font-size:14px;text-align:center;font-weight:700;color:#E65100">${(m.earned/10000).toFixed(0)}만원</span>
         <span style="font-size:13px;text-align:center;color:var(--text-muted)">${(m.paid/10000).toFixed(0)}만원</span>
         <span style="font-size:13px;text-align:right;font-weight:700;color:${unpaid>0?'#E65100':'#2E7D32'}">${unpaid>0?(unpaid/10000).toFixed(0)+'만원':'완납'}</span>
       </div>`;
@@ -1342,8 +1346,11 @@ if (sessionStorage.getItem('pinPassed') !== '1' && hasFP) {
 // ========== 주간 결과 팝업 ==========
 window.closeWeeklyResult = function() {
   document.getElementById('weeklyResultOverlay').style.display = 'none';
-  const lastWeekKey = localStorage.getItem('lastResultShown');
-  localStorage.setItem('lastResultShown', lastWeekKey);
+  // KST 기준 지난 주 일요일 날짜 저장 (다시 안 뜨게)
+  const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+  const lastSunday = new Date(kstNow);
+  lastSunday.setUTCDate(kstNow.getUTCDate() - 1);
+  localStorage.setItem('lastResultShown', getKSTDateStr(lastSunday));
 };
 
 async function checkAndShowWeeklyResult() {

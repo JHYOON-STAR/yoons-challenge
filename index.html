@@ -331,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.3 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.4 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -747,23 +747,42 @@ async function loadRanking() {
   );
   weekScores.sort((a, b) => b.pct - a.pct || b.score - a.score);
 
-  rankEl.innerHTML = weekScores.map((m, i) => `
-    <div class="ranking-card">
+  const MAX_WEEK = MAX_DAILY * 7;
+
+  function getRewardStatus(score) {
+    if (score >= 140) return { label:'🏆 10만원 달성! 완벽한 한 주!', cls:'perfect', barColor:'linear-gradient(90deg,#FFD700,#FF8F00)', cardBg:'linear-gradient(135deg,#FFFDE7,#FFFFFF)', cardBorder:'1.5px solid #FFD700', pctColor:'#FF8F00' };
+    if (score >= 120) return { label:`🥈 5만원 달성! · 10만원까지 ${140-score}점 남음`, cls:'reward', barColor:'linear-gradient(90deg,#42A5F5,#1E88E5)', cardBg:'linear-gradient(135deg,#F5F5F5,#FFFFFF)', cardBorder:'1.5px solid #C0C0C0', pctColor:'#1565C0' };
+    if (score >= 100) return { label:`🥉 3만원 달성! · 5만원까지 ${120-score}점 남음`, cls:'reward', barColor:'linear-gradient(90deg,#FF9800,#FFC107)', cardBg:'linear-gradient(135deg,#FBE9E7,#FFFFFF)', cardBorder:'1.5px solid #CD7F32', pctColor:'#CD7F32' };
+    return { label:`3만원까지 ${100-score}점 남음`, cls:'normal', barColor:'linear-gradient(90deg,var(--primary),#8BC34A)', cardBg:'var(--card)', cardBorder:'none', pctColor:'var(--primary-dark)' };
+  }
+
+  const weekPct7 = (m) => Math.round(m.score / MAX_WEEK * 100);
+
+  rankEl.innerHTML = weekScores.map((m, i) => {
+    const rs = getRewardStatus(m.score);
+    const pct7 = weekPct7(m);
+    return `
+    <div class="ranking-card" style="background:${rs.cardBg};border:${rs.cardBorder}">
       <div class="rank-num ${rankColors[i]}">${medals[i]}</div>
       <div class="rank-avatar">${m.emoji}</div>
       <div class="rank-info">
         <div class="rank-name">${m.name}</div>
-        <div style="margin-top:4px;background:var(--border);border-radius:4px;height:5px;width:90px;overflow:hidden">
-          <div style="height:100%;width:${m.pct}%;background:linear-gradient(90deg,var(--primary),#8BC34A);border-radius:4px"></div>
+        <div style="font-size:12px;margin-bottom:2px">
+          <span style="font-weight:700;color:var(--primary-dark);font-size:13px">${m.score}점</span>
+          <span style="color:#aaa"> · </span>
+          <span style="font-weight:700;color:#1B5E20">주간 ${pct7}%</span>
         </div>
-        <div class="rank-score-text" style="margin-top:3px">${m.score}점 / ${m.maxPossible}점 (${m.daysElapsed}일 기준)</div>
+        <div style="font-size:11px;margin-bottom:4px;color:${rs.cls==='normal'?'#888':rs.cls==='perfect'?'#2E7D32':'#E65100'};font-weight:${rs.cls==='normal'?'400':'700'}">${rs.label}</div>
+        <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden">
+          <div style="height:100%;width:${pct7}%;background:${rs.barColor};border-radius:4px"></div>
+        </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;color:var(--primary-dark)">${m.pct}%</div>
+        <div style="font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;color:${rs.pctColor}">${pct7}%</div>
         <div style="font-size:11px;color:var(--text-muted)">달성률</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // 위로 보상 조건
   const top = weekScores[0];

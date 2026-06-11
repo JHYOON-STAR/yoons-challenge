@@ -331,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.8 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.9 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -393,7 +393,7 @@ if (sessionStorage.getItem('pinPassed') === '1') {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, orderBy, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-auubMQi2c0QQKwTjL9z03uzZmuifHCU",
@@ -1033,16 +1033,23 @@ let selectedUseMember = null;
 
 async function loadCoupons() {
   try {
-    const ref = doc(db, 'coupons', 'all');
-    const snap = await getDoc(ref);
-    coupons = snap.exists() ? (snap.data().list || []) : [];
+    const q = query(collection(db, 'coupons'), orderBy('createdAt', 'asc'));
+    const snap = await getDocs(q);
+    coupons = snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
   } catch(e) { coupons = []; }
   renderCoupons();
 }
 
-async function saveCoupons() {
-  const ref = doc(db, 'coupons', 'all');
-  await setDoc(ref, { list: coupons });
+async function saveSingleCoupon(coupon) {
+  const docId = 'coupon_' + coupon.id;
+  const ref = doc(db, 'coupons', docId);
+  await setDoc(ref, { ...coupon, _docId: docId });
+}
+
+async function deleteSingleCoupon(coupon) {
+  const docId = coupon._docId || ('coupon_' + coupon.id);
+  const ref = doc(db, 'coupons', docId);
+  await deleteDoc(ref);
 }
 
 function renderCoupons() {
@@ -1178,77 +1185,41 @@ document.getElementById('couponImage')?.addEventListener('change', function(e) {
   reader.readAsDataURL(file);
 });
 
-function compressForBarcode(base64) {
-  return new Promise(resolve => {
-    if (!base64) { resolve(null); return; }
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      let w = img.width, h = img.height;
-      // 바코드 최적화: 긴 쪽을 800px로 유지 (화질 중시)
-      const MAX = 800;
-      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
-      else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      // PNG로 먼저 시도 (바코드 선명도 최우선)
-      let result = canvas.toDataURL('image/png');
-      // PNG가 700KB 초과면 JPEG 고품질로
-      if (result.length > 700000) {
-        result = canvas.toDataURL('image/jpeg', 0.9);
-      }
-      // 그래도 크면 크기 줄이기
-      if (result.length > 700000) {
-        const canvas2 = document.createElement('canvas');
-        const MAX2 = 600;
-        let w2 = w, h2 = h;
-        if (w2 > h2) { if (w2 > MAX2) { h2 = Math.round(h2 * MAX2 / w2); w2 = MAX2; } }
-        else { if (h2 > MAX2) { w2 = Math.round(w2 * MAX2 / h2); h2 = MAX2; } }
-        canvas2.width = w2; canvas2.height = h2;
-        canvas2.getContext('2d').drawImage(img, 0, 0, w2, h2);
-        result = canvas2.toDataURL('image/jpeg', 0.85);
-      }
-      resolve(result);
-    };
-    img.onerror = () => resolve(base64);
-    img.src = base64;
-  });
-}
-
 window.saveCoupon = async function() {
   const name = document.getElementById('couponName').value.trim();
   if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
   const hasImg = document.getElementById('couponPreview').style.display !== 'none';
   const expiry = document.getElementById('couponExpiry').value || null;
+  const imageData = hasImg ? couponImageBase64 : null;
 
-  let imageData = null;
-  if (hasImg && couponImageBase64) {
-    showToast('⏳ 저장 중...');
-    imageData = await compressForBarcode(couponImageBase64);
-    if (imageData && imageData.length > 900000) {
-      showToast('⚠️ 사진이 너무 커요! 더 작은 사진을 선택해주세요');
-      return;
-    }
-  }
+  const newCoupon = {
+    id: Date.now(),
+    name,
+    image: imageData,
+    expiry,
+    usedBy: null,
+    usedDate: null,
+    createdAt: new Date().toISOString()
+  };
 
-  coupons.push({ id: Date.now(), name, image: imageData, expiry, usedBy: null, usedDate: null });
   try {
-    await saveCoupons();
+    showToast('⏳ 저장 중...');
+    await saveSingleCoupon(newCoupon);
+    coupons.push({ ...newCoupon, _docId: 'coupon_' + newCoupon.id });
     showToast('✅ 쿠폰이 추가됐어요!');
     hideCouponModal();
     renderCoupons();
   } catch(e) {
-    coupons.pop();
-    showToast('⚠️ 사진이 너무 커요! 더 작은 사진을 선택해주세요');
+    showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.');
   }
 };
 
 window.deleteCoupon = async function(idx) {
   if (!confirm(`"${coupons[idx].name}" 쿠폰을 삭제할까요?`)) return;
-  coupons.splice(idx, 1);
+  const coupon = coupons[idx];
   try {
-    await saveCoupons();
+    await deleteSingleCoupon(coupon);
+    coupons.splice(idx, 1);
     showToast('🗑️ 삭제됐어요');
     renderCoupons();
   } catch(e) { showToast('⚠️ 저장 실패'); }
@@ -1289,7 +1260,7 @@ window.confirmUse = async function() {
   coupons[selectedUseId].usedBy = selectedUseMember;
   coupons[selectedUseId].usedDate = new Date().toISOString();
   try {
-    await saveCoupons();
+    await saveSingleCoupon(coupons[selectedUseId]);
     showToast('✅ 사용 완료 처리됐어요!');
     hideUseModal();
     renderCoupons();

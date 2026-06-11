@@ -331,7 +331,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.5 · 2026.05.20</div>
+<div style="text-align:center;padding:12px;font-size:11px;color:#aaa;">윤패밀리 챌린지 v6.7 · 2026.05.20</div>
 
 <script>
 // PIN 전역 함수 - module 밖에서 선언해야 onclick에서 접근 가능
@@ -946,9 +946,9 @@ window.processPay = async function() {
   } catch(e) { showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.'); }
 };
 
-// 매주 일요일 자정에 상금 자동 합산 (앱 열 때 체크)
+// 매주 월요일 앱 열 때 지난 주 보상 자동 합산
+// Firebase에 저장해서 중복 실행 방지 (여러 기기에서 열어도 한 번만)
 async function checkAndAddWeeklyReward() {
-  const lastCheck = localStorage.getItem('lastRewardCheck');
   // KST 기준 지난 주 일요일 날짜
   const lastWeekEnd = (() => {
     const kstNow = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
@@ -958,17 +958,28 @@ async function checkAndAddWeeklyReward() {
     d.setUTCDate(kstNow.getUTCDate() - diff);
     return getKSTDateStr(d);
   })();
-  if (lastCheck === lastWeekEnd) return;
-  for (const m of MEMBERS) {
-    const { score } = await getWeekData(m.id, -1);
-    const reward = calcWeekReward(score);
-    if (reward > 0) {
-      const money = await getMoneyData(m.id);
-      money.earned = (money.earned || 0) + reward;
-      await saveMoneyData(m.id, money);
+
+  // Firebase에서 마지막 합산 날짜 확인
+  try {
+    const ref = doc(db, 'settings', 'rewardCheck');
+    const snap = await getDoc(ref);
+    const lastCheck = snap.exists() ? snap.data().lastWeekEnd : null;
+    if (lastCheck === lastWeekEnd) return; // 이미 처리됨
+
+    // 보상 합산 실행
+    for (const m of MEMBERS) {
+      const { score } = await getWeekData(m.id, -1);
+      const reward = calcWeekReward(score);
+      if (reward > 0) {
+        const money = await getMoneyData(m.id);
+        money.earned = (money.earned || 0) + reward;
+        await saveMoneyData(m.id, money);
+      }
     }
-  }
-  localStorage.setItem('lastRewardCheck', lastWeekEnd);
+
+    // Firebase에 처리 완료 기록
+    await setDoc(ref, { lastWeekEnd }, { merge: true });
+  } catch(e) { console.error('보상 합산 오류:', e); }
 }
 
 // ========== 보상 ==========
@@ -1167,18 +1178,53 @@ document.getElementById('couponImage')?.addEventListener('change', function(e) {
   reader.readAsDataURL(file);
 });
 
+function compressImage(base64, maxSize, quality) {
+  return new Promise(resolve => {
+    if (!base64) { resolve(null); return; }
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+      else { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+}
+
 window.saveCoupon = async function() {
   const name = document.getElementById('couponName').value.trim();
   if (!name) { showToast('⚠️ 쿠폰 이름을 입력해주세요'); return; }
   const hasImg = document.getElementById('couponPreview').style.display !== 'none';
   const expiry = document.getElementById('couponExpiry').value || null;
-  coupons.push({ id: Date.now(), name, image: hasImg ? couponImageBase64 : null, expiry, usedBy: null, usedDate: null });
+
+  let imageData = null;
+  if (hasImg && couponImageBase64) {
+    showToast('⏳ 저장 중...');
+    imageData = await compressImage(couponImageBase64, 400, 0.6);
+    if (imageData && imageData.length > 500000) {
+      imageData = await compressImage(couponImageBase64, 300, 0.5);
+    }
+    if (imageData && imageData.length > 800000) {
+      showToast('⚠️ 사진이 너무 커요! 더 작은 사진을 선택해주세요');
+      return;
+    }
+  }
+
+  coupons.push({ id: Date.now(), name, image: imageData, expiry, usedBy: null, usedDate: null });
   try {
     await saveCoupons();
     showToast('✅ 쿠폰이 추가됐어요!');
     hideCouponModal();
     renderCoupons();
-  } catch(e) { showToast('⚠️ 저장 실패. 인터넷을 확인해주세요.'); }
+  } catch(e) {
+    coupons.pop();
+    showToast('⚠️ 사진이 너무 커요! 더 작은 사진을 선택해주세요');
+  }
 };
 
 window.deleteCoupon = async function(idx) {
